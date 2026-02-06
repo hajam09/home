@@ -1,0 +1,243 @@
+{% extends 'core/base.html' %}
+{% load custom_filters %}
+{% load static %}
+{% block content %}
+    <link rel='stylesheet' href='https://cdn.datatables.net/2.0.0/css/dataTables.dataTables.css'/>
+    <br>
+    <div class='container' style='color: black; max-width: 90%'>
+        <br>
+        <div class='row'>
+            <div class='col-sm-3'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>Total Spending</h5>
+                        <p class='card-text text-center h1' id='total_spending'></p>
+                    </div>
+                </div>
+            </div>
+            <div class='col-sm-3'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>Total Purchases</h5>
+                        <p class='card-text text-center h1' id='total_purchases'></p>
+                    </div>
+                </div>
+            </div>
+            <div class='col-sm-3'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>Avg. per Purchase</h5>
+                        <p class='card-text text-center h1' id='average_spend'></p>
+                    </div>
+                </div>
+            </div>
+            <div class='col-sm-3'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>Avg. per Month</h5>
+                        <p class='card-text text-center h1' id='average_spend_per_month'></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <br>
+        <div class='row'>
+            <div class='col-sm-6'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>Most Common Retailer</h5>
+                        <p class='card-text text-center h1' id='most_common_retailer'></p>
+                    </div>
+                </div>
+            </div>
+            <div class='col-sm-6'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>Total Unit Weight Purchased</h5>
+                        <p class='card-text text-center h1' id='total_unit_weight_in_grams'></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <br>
+        <div class='row'>
+            <div class='col-sm-6'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>spending_amount_for_each_retailer</h5>
+                        <canvas id='spending_amount_for_each_retailer'></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class='col-sm-6'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>spending_count_for_each_retailer</h5>
+                        <canvas id='spending_count_for_each_retailer'></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <br>
+        <div class='row'>
+            <div class='col-sm-6'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>average_spending_for_each_retailer</h5>
+                        <canvas id='average_spending_for_each_retailer'></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class='col-sm-6'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>Top Expensive Purchases</h5>
+                        <span class='card-text text-center' id='top_expensive_purchases'></span>
+                    </div>
+                </div>
+                <br>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>total_cost_each_year</h5>
+                        <span class='card-text text-center' id='total_cost_each_year'></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class='col'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>monthly_spending</h5>
+                        <canvas id='monthly_spending'></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <br>
+        <table id='all_purchase_detail_table' class='display'>
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Retailer</th>
+                <th>Date</th>
+                <th>Brand</th>
+                <th>Item</th>
+                <th>Pouch Per Box</th>
+                <th>Unit Weight</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Total Weight</th>
+                <th>Price Per KG</th>
+            </tr>
+            <tbody id='all_purchase_detail_tbody'>
+            </tbody>
+            </thead>
+        </table>
+    </div>
+
+    <script src='https://cdn.jsdelivr.net/npm/chart.js@3.0.0/dist/chart.js'></script>
+    <script src='https://cdn.datatables.net/2.0.0/js/dataTables.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js'></script>
+
+    <script>
+        function display_bar_chart(element_id, labels, label, data) {
+            const ctx = document.getElementById(element_id);
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+
+        window.onload = function () {
+            fetch('{% url 'core:v1-cat-purchases-analytics-api' %}')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('total_spending').innerHTML = '£' + data.total_spending;
+                    document.getElementById('total_purchases').innerHTML = data.total_purchases;
+                    document.getElementById('average_spend').innerHTML = '£' + data.average_spend.toFixed(2);
+                    document.getElementById('average_spend_per_month').innerHTML = '£' + data.average_spend_per_month.toFixed(2);
+
+                    document.getElementById('most_common_retailer').innerHTML = data.most_common_retailer.retailer;
+                    document.getElementById('total_unit_weight_in_grams').innerHTML = `${data.total_unit_weight_in_grams} G / ${data.total_unit_weight_in_grams / 1000} KG`;
+
+                    display_bar_chart(
+                        'spending_amount_for_each_retailer',
+                        data.spending_amount_for_each_retailer.map(item => item.retailer),
+                        'Amount spent (£)',
+                        data.spending_amount_for_each_retailer.map(item => item.total_spent)
+                    );
+                    display_bar_chart(
+                        'spending_count_for_each_retailer',
+                        data.spending_count_for_each_retailer.map(item => item.retailer),
+                        '# of Purchases',
+                        data.spending_count_for_each_retailer.map(item => item.purchases_count)
+                    );
+
+                    display_bar_chart(
+                        'average_spending_for_each_retailer',
+                        data.average_spending_for_each_retailer.map(item => item.retailer),
+                        'Amount spent (£)',
+                        data.average_spending_for_each_retailer.map(item => item.average_spent)
+                    );
+                    display_bar_chart(
+                        'monthly_spending',
+                        data.monthly_spending.map(item => item.month),
+                        'Amount spent (£)',
+                        data.monthly_spending.map(item => item.total_spent)
+                    );
+
+                    const purchaseList = document.getElementById('top_expensive_purchases');
+                    data.top_expensive_purchases.forEach(purchase => {
+                        const purchaseItem = document.createElement('li');
+                        purchaseItem.innerHTML = `${purchase.brand}: £${purchase.rounded_price} from ${purchase.retailer} on ${purchase.date}`;
+                        purchaseList.appendChild(purchaseItem);
+                    });
+
+                    const _total_cost_each_year = document.getElementById('total_cost_each_year');
+                    data.total_cost_each_year.forEach(cost => {
+                        const costItem = document.createElement('li');
+                        const date = new Date(cost.year);
+                        costItem.innerHTML = `In ${date.getFullYear()} you paid £${cost.total_cost_per_year}`;
+                        _total_cost_each_year.append(costItem)
+                    });
+
+                    const all_purchase_detail_tbody_element = document.getElementById('all_purchase_detail_tbody');
+                    data.all_purchase_detail.forEach(data => {
+                        const tr = document.createElement('tr');
+                        Object.keys(data).forEach(function (key) {
+                            const td = document.createElement('td');
+                            td.textContent = data[key];
+                            tr.appendChild(td);
+                        })
+                        all_purchase_detail_tbody_element.appendChild(tr);
+                    });
+
+                    new DataTable('#all_purchase_detail_table');
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                });
+        }
+    </script>
+{% endblock %}

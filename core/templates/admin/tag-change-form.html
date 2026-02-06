@@ -1,0 +1,13 @@
+{% extends 'admin/change_form.html' %}
+
+{% block content %}
+    {{ block.super }}
+
+    <h2>Object that uses this tag</h2>
+    <br>
+    {% for m_and_u in model_and_url %}
+        <p>
+            <a href="{{ m_and_u.url }}">{{ m_and_u.model }} - {{ m_and_u.url }}</a>
+        </p>
+    {% endfor %}
+{% endblock %}

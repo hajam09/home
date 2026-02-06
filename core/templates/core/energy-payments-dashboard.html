@@ -1,0 +1,247 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block content %}
+    <link rel='stylesheet' href='https://cdn.datatables.net/2.0.0/css/dataTables.dataTables.css'/>
+    <br>
+    <div class='container' style='color: black; max-width: 90%'>
+        <br>
+        <div class='row'>
+            <div class='col-sm-4'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>Average cost per month for all utilities</h5>
+                        <p class='card-text text-center h1' id='average_cost_per_month_for_all_utilities'></p>
+                    </div>
+                </div>
+            </div>
+            <div class='col-sm-4'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>Average cost per month for electricity</h5>
+                        <p class='card-text text-center h1' id='average_cost_per_month_for_electricity'></p>
+                    </div>
+                </div>
+            </div>
+            <div class='col-sm-4'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>Average cost per month for gas</h5>
+                        <p class='card-text text-center h1' id='average_cost_per_month_for_gas'></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <br>
+        <div class='row'>
+            <div class='col-sm-4'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>Total cost for all utilities</h5>
+                        <p class='card-text text-center h1' id='total_cost_for_all_utilities'></p>
+                    </div>
+                </div>
+            </div>
+            <div class='col-sm-4'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>Total cost for electricity</h5>
+                        <p class='card-text text-center h1' id='total_cost_for_electricity'></p>
+                    </div>
+                </div>
+            </div>
+            <div class='col-sm-4'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>Total cost for gas</h5>
+                        <p class='card-text text-center h1' id='total_cost_for_gas'></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <br>
+        <div class='row'>
+            <div class='col-sm-4'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>Total cost each year for all utilities</h5>
+                        <p class='card-text text-center' id='total_cost_each_year_for_all_utilities'></p>
+                    </div>
+                </div>
+            </div>
+            <div class='col-sm-4'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>Total cost each year for electricity</h5>
+                        <p class='card-text text-center' id='total_cost_each_year_for_electricity'></p>
+                    </div>
+                </div>
+            </div>
+            <div class='col-sm-4'>
+                <div class='card'>
+                    <div class='card-body'>
+                        <h5 class='card-title text-center'>Total cost each year for gas</h5>
+                        <p class='card-text text-center' id='total_cost_each_year_for_gas'></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <br>
+        <div class='row'>
+            <canvas id='cost_by_each_month_for_all_utilities'></canvas>
+        </div>
+        <br>
+        <div class='row'>
+            <canvas id='cost_by_each_month_for_electricity__and__cost_by_each_month_for_gas'></canvas>
+        </div>
+        <br>
+        <br>
+    </div>
+    <script src='https://cdn.jsdelivr.net/npm/chart.js@3.0.0/dist/chart.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js'></script>
+
+    <script>
+        function cost_by_each_month_for_all_utilities(labels, data) {
+            const ctx = document.getElementById('cost_by_each_month_for_all_utilities');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'cost_by_each_month_for_all_utilities',
+                        data: data,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function (value, index, ticks) {
+                                    return '£' + value;
+                                }
+                            },
+                            beginAtZero: true,
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+
+        function cost_by_each_month_for_electricity__and__cost_by_each_month_for_gas(labels, electricity_data, gas_data) {
+            const ctx = document.getElementById('cost_by_each_month_for_electricity__and__cost_by_each_month_for_gas');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'cost_by_each_month_for_all_electricity',
+                            data: electricity_data,
+                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'cost_by_each_month_for_all_gas',
+                            data: gas_data,
+                            backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            ticks: {
+                                callback: function (value, index, ticks) {
+                                    return '£' + value;
+                                }
+                            },
+                            beginAtZero: true,
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+
+        function toDataMap(rawData) {
+            return rawData.reduce((map, item) => {
+                map[item.month] = item.total;
+                return map;
+            }, {});
+        }
+
+        function alignData(dates, dataMap) {
+            return dates.map(date => dataMap[date] ?? 0);
+        }
+
+        window.onload = function () {
+            fetch('{% url 'core:v1-energy-payments-analytics-api' %}')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('average_cost_per_month_for_all_utilities').innerHTML = '£' + data.average_cost_per_month_for_all_utilities;
+                    document.getElementById('average_cost_per_month_for_electricity').innerHTML = '£' + data.average_cost_per_month_for_electricity.toFixed(2);
+                    document.getElementById('average_cost_per_month_for_gas').innerHTML = '£' + data.average_cost_per_month_for_gas.toFixed(2);
+                    document.getElementById('total_cost_for_all_utilities').innerHTML = '£' + data.total_cost_for_all_utilities.toFixed(2);
+                    document.getElementById('total_cost_for_electricity').innerHTML = '£' + data.total_cost_for_electricity.toFixed(2);
+                    document.getElementById('total_cost_for_gas').innerHTML = '£' + data.total_cost_for_gas.toFixed(2);
+
+                    const _total_cost_each_year_for_all_utilities = document.getElementById('total_cost_each_year_for_all_utilities');
+                    const _total_cost_each_year_for_electricity = document.getElementById('total_cost_each_year_for_electricity');
+                    const _total_cost_each_year_for_gas = document.getElementById('total_cost_each_year_for_gas');
+
+                    data.total_cost_each_year_for_all_utilities.forEach(cost => {
+                        const costItem = document.createElement('li');
+                        const date = new Date(cost.year);
+                        costItem.innerHTML = `In ${date.getFullYear()} you paid £${cost.total_cost_per_year}`;
+                        _total_cost_each_year_for_all_utilities.appendChild(costItem);
+                    });
+
+                    data.total_cost_each_year_for_electricity.forEach(cost => {
+                        const costItem = document.createElement('li');
+                        const date = new Date(cost.year);
+                        costItem.innerHTML = `In ${date.getFullYear()} you paid £${cost.total_cost_per_year}`;
+                        _total_cost_each_year_for_electricity.appendChild(costItem);
+                    });
+
+                    data.total_cost_each_year_for_gas.forEach(cost => {
+                        const costItem = document.createElement('li');
+                        const date = new Date(cost.year);
+                        costItem.innerHTML = `In ${date.getFullYear()} you paid £${cost.total_cost_per_year}`;
+                        _total_cost_each_year_for_gas.appendChild(costItem);
+                    });
+
+                    cost_by_each_month_for_all_utilities(
+                        data.cost_by_each_month_for_all_utilities.map(item => {
+                            const date = new Date(item.month);
+                            return date.toLocaleDateString('en-US', {month: 'short', year: 'numeric'});
+                        }),
+                        data.cost_by_each_month_for_all_utilities.map(item => item.total)
+                    );
+
+                    const electricity_labels = data.cost_by_each_month_for_electricity.map(item => item.month);
+                    const gas_labels = data.cost_by_each_month_for_gas.map(item => item.month);
+                    const combined_dates_sorted = Array.from(new Set([...electricity_labels, ...gas_labels])).sort((a, b) => new Date(a) - new Date(b));
+                    const formatted_labels = combined_dates_sorted.map(dateStr => {
+                        const date = new Date(dateStr);
+                        return date.toLocaleDateString('en-US', {month: 'short', year: 'numeric'});
+                    });
+
+                    cost_by_each_month_for_electricity__and__cost_by_each_month_for_gas(
+                        formatted_labels,
+                        alignData(combined_dates_sorted, toDataMap(data.cost_by_each_month_for_electricity)),
+                        alignData(combined_dates_sorted, toDataMap(data.cost_by_each_month_for_gas))
+                    );
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                });
+        }
+    </script>
+{% endblock %}
