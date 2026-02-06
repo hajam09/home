@@ -116,25 +116,6 @@ class CatPurchasesAnalyticsApiVersion1(APIView):
             .order_by("month")
         )
 
-        # ---- Value / cost metrics ----
-        price_per_kg_qs = qs.annotate(
-            pricePerKG=Round(self.price_per_kg_expr(), precision=2)
-        )
-
-        cheapest_per_kg = (
-            price_per_kg_qs
-            .order_by("pricePerKG")
-            .values("brand", "retailer", "pricePerKG")
-            .first()
-        )
-
-        most_expensive_per_kg = (
-            price_per_kg_qs
-            .order_by("-pricePerKG")
-            .values("brand", "retailer", "pricePerKG")
-            .first()
-        )
-
         # ---- Expensive purchases ----
         top_expensive_purchases = (
             qs.annotate(rounded_price=Round(F("price"), precision=2))
@@ -175,9 +156,7 @@ class CatPurchasesAnalyticsApiVersion1(APIView):
             "total_cost_each_year": total_cost_each_year,
             "all_purchase_detail": all_purchase_detail,
 
-            # New but harmless additions
-            "cheapest_per_kg": cheapest_per_kg,
-            "most_expensive_per_kg": most_expensive_per_kg,
+            "monthly_spending": monthly_spending,
         }
 
         return Response(data, status=status.HTTP_200_OK)
@@ -217,10 +196,6 @@ class EnergyPaymentAnalyticsApiVersion1(APIView):
         if not monthly_data:
             return 0
         return sum(row["total"] for row in monthly_data) / len(monthly_data)
-
-    # -----------------------------
-    # GET
-    # -----------------------------
 
     def get(self, request):
         qs = self.base_queryset()
