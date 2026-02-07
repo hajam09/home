@@ -11,6 +11,8 @@ from core.models import (
     EnergyPayment,
     Cat,
     EventReminder,
+    Goal,
+    Task,
 )
 
 
@@ -178,3 +180,33 @@ class Command(BaseCommand):
             ]
         )
         self.log(f'Fetched {len(eventReminders)} EventReminder objects.')
+
+        self.log('Fetching Goal objects...')
+        goals = Goal.objects.bulk_create(
+            [
+                Goal(
+                    name=item.get('name'),
+                    createdDateTime=item.get('createdDateTime'),
+                    modifiedDateTime=item.get('modifiedDateTime'),
+                )
+                for item in self.request('goals/')
+            ]
+        )
+        self.log(f'Fetched {len(goals)} Goal objects.')
+        goals = {
+            g.id: g
+            for g in Goal.objects.all()
+        }
+
+        self.log('Fetching Task objects...')
+        tasks = Task.objects.bulk_create(
+            [
+                Task(
+                    name=item.get('name'),
+                    completed=item.get('completed'),
+                    goal=goals.get(item.get('goal')),
+                )
+                for item in self.request('tasks/')
+            ]
+        )
+        self.log(f'Fetched {len(tasks)} Task objects.')

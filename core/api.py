@@ -33,6 +33,8 @@ from core.models import (
     EnergyPayment,
     Cat,
     EventReminder,
+    Goal,
+    Task,
 )
 
 
@@ -43,13 +45,13 @@ class CatPurchasesAnalyticsApiVersion1(APIView):
 
     def total_weight_expr(self):
         return ExpressionWrapper(
-            F("pouchPerBox") * F("unitWeight") * F("quantity"),
+            F('pouchPerBox') * F('unitWeight') * F('quantity'),
             output_field=IntegerField()
         )
 
     def price_per_kg_expr(self):
         return ExpressionWrapper(
-            F("price") / (self.total_weight_expr() * 0.001),
+            F('price') / (self.total_weight_expr() * 0.001),
             output_field=DecimalField(max_digits=10, decimal_places=2)
         )
 
@@ -65,62 +67,62 @@ class CatPurchasesAnalyticsApiVersion1(APIView):
 
         # ---- Core aggregates ----
         aggregates = qs.aggregate(
-            total_spending=Sum("price"),
-            average_spend=Avg("price"),
+            total_spending=Sum('price'),
+            average_spend=Avg('price'),
             total_unit_weight=Sum(self.total_weight_expr()),
-            first_date=Min("date"),
-            last_date=Max("date"),
+            first_date=Min('date'),
+            last_date=Max('date'),
         )
 
         average_spend_per_month = self.average_spend_per_month(
-            aggregates["total_spending"] or 0,
-            aggregates["first_date"],
-            aggregates["last_date"],
+            aggregates['total_spending'] or 0,
+            aggregates['first_date'],
+            aggregates['last_date'],
         )
 
         # ---- Retailer analytics ----
-        spending_amount_for_each_retailer = qs.values("retailer").annotate(
-            total_spent=Sum("price")
+        spending_amount_for_each_retailer = qs.values('retailer').annotate(
+            total_spent=Sum('price')
         )
 
-        spending_count_for_each_retailer = qs.values("retailer").annotate(
-            purchases_count=Count("id")
+        spending_count_for_each_retailer = qs.values('retailer').annotate(
+            purchases_count=Count('id')
         )
 
-        average_spending_for_each_retailer = qs.values("retailer").annotate(
-            average_spent=Round(Avg("price"), precision=2)
+        average_spending_for_each_retailer = qs.values('retailer').annotate(
+            average_spent=Round(Avg('price'), precision=2)
         )
 
         most_common_retailer = (
-            qs.values("retailer")
-            .annotate(count=Count("id"))
-            .order_by("-count")
+            qs.values('retailer')
+            .annotate(count=Count('id'))
+            .order_by('-count')
             .first()
         )
 
         # ---- Time-based ----
         total_cost_each_year = (
-            qs.annotate(year=TruncYear("date"))
-            .values("year")
-            .annotate(total_cost_per_year=Sum("price"))
-            .order_by("year")
+            qs.annotate(year=TruncYear('date'))
+            .values('year')
+            .annotate(total_cost_per_year=Sum('price'))
+            .order_by('year')
         )
 
         monthly_spending = (
-            qs.annotate(month=TruncMonth("date"))
-            .values("month")
+            qs.annotate(month=TruncMonth('date'))
+            .values('month')
             .annotate(
-                total_spent=Sum("price"),
-                purchase_count=Count("id"),
+                total_spent=Sum('price'),
+                purchase_count=Count('id'),
             )
-            .order_by("month")
+            .order_by('month')
         )
 
         # ---- Expensive purchases ----
         top_expensive_purchases = (
-            qs.annotate(rounded_price=Round(F("price"), precision=2))
-            .values("brand", "rounded_price", "retailer", "date")
-            .order_by("-price")[:5]
+            qs.annotate(rounded_price=Round(F('price'), precision=2))
+            .values('brand', 'rounded_price', 'retailer', 'date')
+            .order_by('-price')[:5]
         )
 
         # ---- Detailed table ----
@@ -130,33 +132,33 @@ class CatPurchasesAnalyticsApiVersion1(APIView):
                 pricePerKG=Round(self.price_per_kg_expr(), precision=2),
             )
             .values(
-                "id", "retailer", "date", "brand", "item",
-                "pouchPerBox", "unitWeight", "quantity",
-                "price", "totalWeight", "pricePerKG",
+                'id', 'retailer', 'date', 'brand', 'item',
+                'pouchPerBox', 'unitWeight', 'quantity',
+                'price', 'totalWeight', 'pricePerKG',
             )
-            .order_by("-date")
+            .order_by('-date')
         )
 
         # ---- Final response ----
         data = {
             # Same as V1
-            "total_spending": aggregates["total_spending"] or 0,
-            "total_purchases": qs.count(),
-            "average_spend": aggregates["average_spend"] or 0,
-            "average_spend_per_month": average_spend_per_month,
+            'total_spending': aggregates['total_spending'] or 0,
+            'total_purchases': qs.count(),
+            'average_spend': aggregates['average_spend'] or 0,
+            'average_spend_per_month': average_spend_per_month,
 
-            "spending_amount_for_each_retailer": spending_amount_for_each_retailer,
-            "spending_count_for_each_retailer": spending_count_for_each_retailer,
-            "average_spending_for_each_retailer": average_spending_for_each_retailer,
-            "most_common_retailer": most_common_retailer,
+            'spending_amount_for_each_retailer': spending_amount_for_each_retailer,
+            'spending_count_for_each_retailer': spending_count_for_each_retailer,
+            'average_spending_for_each_retailer': average_spending_for_each_retailer,
+            'most_common_retailer': most_common_retailer,
 
-            "total_unit_weight_in_grams": aggregates["total_unit_weight"] or 0,
+            'total_unit_weight_in_grams': aggregates['total_unit_weight'] or 0,
 
-            "top_expensive_purchases": top_expensive_purchases,
-            "total_cost_each_year": total_cost_each_year,
-            "all_purchase_detail": all_purchase_detail,
+            'top_expensive_purchases': top_expensive_purchases,
+            'total_cost_each_year': total_cost_each_year,
+            'all_purchase_detail': all_purchase_detail,
 
-            "monthly_spending": monthly_spending,
+            'monthly_spending': monthly_spending,
         }
 
         return Response(data, status=status.HTTP_200_OK)
@@ -165,7 +167,7 @@ class CatPurchasesAnalyticsApiVersion1(APIView):
 class EnergyPaymentAnalyticsApiVersion1(APIView):
 
     def base_queryset(self):
-        return EnergyPayment.objects.select_related("meterPoint")
+        return EnergyPayment.objects.select_related('meterPoint')
 
     def electricity_filter(self):
         return Q(meterPoint__utilityMarket=MeterPoint.UtilityMarket.ELECTRICITY)
@@ -175,27 +177,27 @@ class EnergyPaymentAnalyticsApiVersion1(APIView):
 
     def monthly_costs(self, qs):
         return (
-            qs.annotate(month=TruncMonth("date"))
-            .values("month")
+            qs.annotate(month=TruncMonth('date'))
+            .values('month')
             .annotate(
-                total=Sum("amount"),
-                payment_count=Count("id"),
+                total=Sum('amount'),
+                payment_count=Count('id'),
             )
-            .order_by("month")
+            .order_by('month')
         )
 
     def yearly_costs(self, qs):
         return (
-            qs.annotate(year=TruncYear("date"))
-            .values("year")
-            .annotate(total_cost_per_year=Sum("amount"))
-            .order_by("year")
+            qs.annotate(year=TruncYear('date'))
+            .values('year')
+            .annotate(total_cost_per_year=Sum('amount'))
+            .order_by('year')
         )
 
     def average_from_monthlies(self, monthly_data):
         if not monthly_data:
             return 0
-        return sum(row["total"] for row in monthly_data) / len(monthly_data)
+        return sum(row['total'] for row in monthly_data) / len(monthly_data)
 
     def get(self, request):
         qs = self.base_queryset()
@@ -214,9 +216,9 @@ class EnergyPaymentAnalyticsApiVersion1(APIView):
         avg_cost_gas = self.average_from_monthlies(monthly_gas)
 
         # ---- Totals ----
-        total_cost_all = qs.aggregate(total=Sum("amount"))["total"] or 0
-        total_cost_elec = elec_qs.aggregate(total=Sum("amount"))["total"] or 0
-        total_cost_gas = gas_qs.aggregate(total=Sum("amount"))["total"] or 0
+        total_cost_all = qs.aggregate(total=Sum('amount'))['total'] or 0
+        total_cost_elec = elec_qs.aggregate(total=Sum('amount'))['total'] or 0
+        total_cost_gas = gas_qs.aggregate(total=Sum('amount'))['total'] or 0
 
         # ---- Yearly ----
         yearly_all = list(self.yearly_costs(qs))
@@ -225,35 +227,35 @@ class EnergyPaymentAnalyticsApiVersion1(APIView):
 
         # ---- Payment behaviour ----
         payment_counts = {
-            "all": qs.count(),
-            "electricity": elec_qs.count(),
-            "gas": gas_qs.count(),
+            'all': qs.count(),
+            'electricity': elec_qs.count(),
+            'gas': gas_qs.count(),
         }
 
         # ---- Final response ----
         data = {
             # Averages
-            "average_cost_per_month_for_all_utilities": avg_cost_all,
-            "average_cost_per_month_for_electricity": avg_cost_elec,
-            "average_cost_per_month_for_gas": avg_cost_gas,
+            'average_cost_per_month_for_all_utilities': avg_cost_all,
+            'average_cost_per_month_for_electricity': avg_cost_elec,
+            'average_cost_per_month_for_gas': avg_cost_gas,
 
             # Totals
-            "total_cost_for_all_utilities": total_cost_all,
-            "total_cost_for_electricity": total_cost_elec,
-            "total_cost_for_gas": total_cost_gas,
+            'total_cost_for_all_utilities': total_cost_all,
+            'total_cost_for_electricity': total_cost_elec,
+            'total_cost_for_gas': total_cost_gas,
 
             # Counts & behaviour
-            "payment_counts": payment_counts,
+            'payment_counts': payment_counts,
 
             # Yearly totals
-            "total_cost_each_year_for_all_utilities": yearly_all,
-            "total_cost_each_year_for_electricity": yearly_electricity,
-            "total_cost_each_year_for_gas": yearly_gas,
+            'total_cost_each_year_for_all_utilities': yearly_all,
+            'total_cost_each_year_for_electricity': yearly_electricity,
+            'total_cost_each_year_for_gas': yearly_gas,
 
             # Monthly breakdowns (charts)
-            "cost_by_each_month_for_all_utilities": monthly_all,
-            "cost_by_each_month_for_electricity": monthly_electricity,
-            "cost_by_each_month_for_gas": monthly_gas,
+            'cost_by_each_month_for_all_utilities': monthly_all,
+            'cost_by_each_month_for_electricity': monthly_electricity,
+            'cost_by_each_month_for_gas': monthly_gas,
         }
 
         return Response(data, status=status.HTTP_200_OK)
@@ -263,7 +265,7 @@ class TagListAPI(ListAPIView):
     class TagSerializer(serializers.ModelSerializer):
         class Meta:
             model = Tag
-            fields = "__all__"
+            fields = '__all__'
 
     queryset = Tag.objects.all().order_by('id')
     serializer_class = TagSerializer
@@ -276,7 +278,7 @@ class CatPurchasesListAPI(ListAPIView):
 
         class Meta:
             model = CatPurchases
-            fields = "__all__"
+            fields = '__all__'
 
     queryset = CatPurchases.objects.all().prefetch_related('tags').order_by('date')
     serializer_class = CatPurchasesSerializer
@@ -289,7 +291,7 @@ class JournalEntryListAPI(ListAPIView):
 
         class Meta:
             model = JournalEntry
-            fields = "__all__"
+            fields = '__all__'
 
     queryset = JournalEntry.objects.all().prefetch_related('tags').order_by('createdDateTime', 'id')
     serializer_class = JournalEntrySerializer
@@ -302,7 +304,7 @@ class InventoryItemListAPI(ListAPIView):
 
         class Meta:
             model = InventoryItem
-            fields = "__all__"
+            fields = '__all__'
 
     queryset = InventoryItem.objects.all().prefetch_related('tags').order_by('id')
     serializer_class = InventoryItemSerializer
@@ -313,7 +315,7 @@ class MeterPointListAPI(ListAPIView):
     class MeterPointSerializer(serializers.ModelSerializer):
         class Meta:
             model = MeterPoint
-            fields = "__all__"
+            fields = '__all__'
 
     queryset = MeterPoint.objects.all().order_by('id')
     serializer_class = MeterPointSerializer
@@ -339,7 +341,7 @@ class CatListAPI(ListAPIView):
 
         class Meta:
             model = Cat
-            fields = "__all__"
+            fields = '__all__'
 
     queryset = Cat.objects.all().prefetch_related('tags').order_by('createdDateTime')
     serializer_class = CatSerializer
@@ -350,8 +352,50 @@ class EventReminderListAPI(ListAPIView):
     class EventReminderSerializer(serializers.ModelSerializer):
         class Meta:
             model = EventReminder
-            fields = "__all__"
+            fields = '__all__'
 
     queryset = EventReminder.objects.all().order_by('createdDateTime')
     serializer_class = EventReminderSerializer
     permission_classes = [IsAuthenticated]
+
+
+class GoalListAPI(ListAPIView):
+    class GoalSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = Goal
+            fields = '__all__'
+
+    queryset = Goal.objects.all().order_by('createdDateTime')
+    serializer_class = GoalSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class TaskListAPI(ListAPIView):
+    class TaskSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = Task
+            fields = '__all__'
+
+    serializer_class = TaskSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        goal = self.request.GET.get('goal')
+        tasks = Task.objects.all()
+        if goal:
+            tasks = tasks.filter(goal__id=goal)
+        return tasks.order_by('completed', 'id')
+
+    def patch(self, *args, **kwargs):
+        task = self.request.data.get('task')
+        completed = self.request.data.get('completed')
+        name = self.request.data.get('name', None)
+
+        data = {}
+        if completed is not None:
+            data['completed'] = completed
+        if name is not None:
+            data['name'] = name
+
+        Task.objects.filter(id=task).update(**data)
+        return Response(status=status.HTTP_200_OK)

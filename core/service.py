@@ -9,4 +9,4 @@ def mapChannelForEnergyPayment(label):
         if choice.label.lower() == label.lower():
             return choice.value
 
-    raise ValueError("Invalid channel")
+    raise ValueError('Invalid channel')

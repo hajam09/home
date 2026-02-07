@@ -1,9 +1,9 @@
-from django import forms
 from django.apps import apps
 from django.contrib import (
     admin
 )
 from django.contrib.sessions.models import Session
+from django.db.models import Count, Q
 from django.urls import (
     reverse
 )
@@ -17,6 +17,8 @@ from core.models import (
     Tag,
     EventReminder,
     MeterPoint,
+    Goal,
+    Task
 )
 
 
@@ -84,10 +86,6 @@ class EventReminderAdmin(admin.ModelAdmin):
     )
 
 
-class EnergyPaymentsCsvImportForm(forms.Form):
-    csvUpload = forms.FileField()
-
-
 @admin.register(EnergyPayment)
 class EnergyPaymentAdmin(admin.ModelAdmin):
     list_display = [field.name for field in EnergyPayment._meta.get_fields()]
@@ -108,6 +106,23 @@ class EnergyPaymentAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         queryset = super().get_queryset(request)
         return queryset.select_related('meterPoint')
+
+
+@admin.register(MeterPoint)
+class MeterPointAdmin(admin.ModelAdmin):
+    class EnergyPaymentInline(admin.TabularInline):
+        model = EnergyPayment
+        extra = 5
+        can_delete = False
+        fields = ('date', 'time', 'channel', 'topUpCode', 'amount')
+
+    list_display = [
+        'smartCardNumber',
+        'identifier',
+        'utilityMarket',
+        'tariff',
+    ]
+    inlines = [EnergyPaymentInline]
 
 
 @admin.register(InventoryItem)
@@ -152,22 +167,53 @@ class JournalEntryAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(MeterPoint)
-class MeterPointAdmin(admin.ModelAdmin):
-    list_display = [
-        'smartCardNumber',
-        'identifier',
-        'utilityMarket',
-        'tariff',
-    ]
-
-
 @admin.register(Session)
 class SessionAdmin(admin.ModelAdmin):
     def _session_data(self, obj):
         return obj.get_decoded()
 
     list_display = ['session_key', '_session_data', 'expire_date']
+
+
+@admin.register(Task)
+class TaskAdmin(admin.ModelAdmin):
+    list_display = [field.name for field in Task._meta.get_fields()]
+    list_filter = [
+        'completed',
+        'goal'
+    ]
+    search_fields = (
+        'name',
+        'goal__name',
+    )
+
+
+@admin.register(Goal)
+class GoalAdmin(admin.ModelAdmin):
+    class TaskInline(admin.TabularInline):
+        model = Task
+        extra = 5
+
+    list_display = [
+        'name', 'completedTasks', 'totalTasks', 'createdDateTime'
+    ]
+    inlines = [TaskInline]
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        return queryset.annotate(
+            totalTasks=Count('tasks'),
+            completedTasks=Count('tasks', filter=Q(tasks__completed=True)),
+        )
+
+    def totalTasks(self, obj):
+        return obj.totalTasks
+
+    def completedTasks(self, obj):
+        return obj.completedTasks
+
+    totalTasks.short_description = 'Total Tasks'
+    completedTasks.short_description = 'Completed Tasks'
 
 
 @admin.register(Tag)
@@ -188,7 +234,7 @@ class TagAdmin(admin.ModelAdmin):
 
     usage_count.short_description = 'Usage Count'
 
-    def change_view(self, request, object_id, form_url="", extra_context=None):
+    def change_view(self, request, object_id, form_url='', extra_context=None):
         model_names = ['CatPurchases', 'JournalEntry', 'InventoryItem', 'Cat']
         models = [apps.get_model('core', model_name) for model_name in model_names]
 

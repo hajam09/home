@@ -1,45 +1,94 @@
 import csv
 from datetime import datetime
 
+from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import BooleanField, Case, Count, DateTimeField, F, Q, Value, When
 from django.http import HttpResponseRedirect
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.utils.timezone import now
 
 from core import service
-from core.models import (
-    EnergyPayment,
-    MeterPoint
-)
+from core.models import EnergyPayment, MeterPoint, Goal, Task
 
-"""
-CatPurchases:
-    * Base table with additional columns to show totalWeight, totalPrice and pricePerKG.
-    * Pie chart showing unique retailers and each pie showing how much money spent.
-    * Pie chart showing unique brands and each pie showing how much money spent.
-    * Card showing how much total amount spent on cat food.
-    * Card showing average amount spend on cat food each month.
-    * Table showing cat name, registered owner and primary/secondary.
-    * Line graph showing amount spent on cat food each month.
 
-EnergyPayment:
-    * Bar graph showing total number of energy payments made for all utilities/electricity/gas for each month.
-    * Bar graph showing cost for each month for all utilities/electricity/gas.
-    * Card showing total amount spent on all utilities/electricity/gas.
-    * Card showing average amount spent on all utilities/electricity/gas.
-"""
+def indexView(request):
+    appData = []
+    totalModels = 0
+
+    for appConfig in apps.get_app_configs():
+        if appConfig.label in {'admin', 'contenttypes', 'sessions', }:
+            continue
+
+        modelData = []
+        appLatestActivity = None
+        appTotalObjects = 0
+
+        for model in appConfig.get_models():
+            totalModels += 1
+            qs = model.objects.all()
+            objectCount = qs.count()
+
+            appTotalObjects += objectCount
+
+            dateTimeFields = [
+                field.name for field in model._meta.fields
+                if isinstance(field, DateTimeField)
+            ]
+
+            lastObject = None
+            modelLastActivity = None
+
+            if dateTimeFields:
+                fieldName = dateTimeFields[0]
+                lastObject = qs.order_by(f'-{fieldName}').first()
+
+                if lastObject:
+                    modelLastActivity = getattr(lastObject, fieldName, None)
+
+            if modelLastActivity and (
+                    not appLatestActivity or modelLastActivity > appLatestActivity
+            ):
+                appLatestActivity = modelLastActivity
+
+            modelData.append({
+                'modelName': model.__name__,
+                'objectCount': objectCount,
+                'lastObject': lastObject,
+                'lastActivity': modelLastActivity,
+            })
+
+        if modelData:
+            appData.append({
+                'appName': appConfig.label,
+                'modelCount': len(modelData),
+                'models': modelData,
+                'latestActivity': appLatestActivity,
+                'totalObjects': appTotalObjects,
+            })
+
+    context = {
+        'apps': appData,
+        'totalApps': len(appData),
+        'totalModels': totalModels,
+        'generatedAt': now(),
+    }
+    return render(request, 'core/index.html', context)
 
 
 @login_required
-def energyPaymentUploadForMeterPoint(request):
+def meterPointsView(request):
     meterPoints = []
     meterPoint = None
     uploadPreview = []  # To store row info and errors
+    energyPayments = []
 
     if not request.GET.get('meter-point'):
         meterPoints = MeterPoint.objects.all()
     else:
         meterPoint = MeterPoint.objects.filter(identifier=request.GET.get('meter-point').strip()).first()
+        energyPayments = EnergyPayment.objects.filter(meterPoint=meterPoint)
 
     createdCount = 0
     skippedCount = 0
@@ -90,6 +139,50 @@ def energyPaymentUploadForMeterPoint(request):
         'meterPoint': meterPoint,
         'uploadPreview': uploadPreview,
         'createdCount': createdCount,
-        'skippedCount': skippedCount
+        'skippedCount': skippedCount,
+        'energyPayments': energyPayments,
     }
-    return render(request, 'core/energy-payments--csv-upload.html', context)
+    return render(request, 'core/meter-points-template.html', context)
+
+
+@login_required
+def goalAndTasks(request):
+    goals = []
+    goal = None
+
+    if request.GET.get('goal'):
+        if request.method == 'POST' and request.POST.get('name'):
+            Task.objects.bulk_create(
+                [
+                    Task(goal_id=request.GET.get('goal'), name=name)
+                    for name in [name.strip() for name in request.POST.get('name').split(',') if name.strip()]
+                ]
+            )
+            return redirect(f'{request.path}?goal={request.GET.get("goal")}')
+
+        goal = Goal.objects.get(id=request.GET.get('goal'))
+    else:
+        goals = Goal.objects.annotate(
+            totalTasks=Count('tasks'),
+            completedTasks=Count('tasks', filter=Q(tasks__completed=True)),
+        ).annotate(
+            isCompleted=Case(
+                When(
+                    totalTasks__gt=0,
+                    totalTasks=F('completedTasks'),
+                    then=Value(True),
+                ),
+                default=Value(False),
+                output_field=BooleanField(),
+            )
+        ).order_by('isCompleted', '-createdDateTime')
+
+        if request.method == 'POST' and request.POST.get('name'):
+            Goal.objects.create(name=request.POST.get('name'))
+            return redirect(request.path)
+
+    context = {
+        'goals': goals,
+        'goal': goal,
+    }
+    return render(request, 'core/goals-and-tasks.html', context)

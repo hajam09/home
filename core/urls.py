@@ -12,18 +12,22 @@ from core.api import (
     EnergyPaymentListAPI,
     CatListAPI,
     EventReminderListAPI,
+    GoalListAPI,
+    TaskListAPI,
 )
 from core.views import (
-    energyPaymentUploadForMeterPoint
+    indexView,
+    meterPointsView,
+    goalAndTasks,
 )
 
 app_name = 'core'
 
 urlpatterns = [
-    # Frontend pages
+    # Default views
     path(
         '',
-        TemplateView.as_view(template_name='core/index.html'),
+        indexView,
         name='index-view'
     ),
     path(
@@ -36,12 +40,15 @@ urlpatterns = [
         TemplateView.as_view(template_name='core/energy-payments-dashboard.html'),
         name='energy-payments-dashboard'
     ),
-
-    # File upload view
     path(
-        'energy-payment-upload/',
-        energyPaymentUploadForMeterPoint,
-        name='energy-payment-upload'
+        'meter-points/',
+        meterPointsView,
+        name='meter-points-view'
+    ),
+    path(
+        'goals-and-tasks/',
+        goalAndTasks,
+        name='goals-and-tasks'
     ),
 
     # Versioned custom APIs
@@ -65,4 +72,6 @@ urlpatterns = [
     path('api/energy-payments/', EnergyPaymentListAPI.as_view(), name='energy-payments-list'),
     path('api/cats/', CatListAPI.as_view(), name='cats-list'),
     path('api/event-reminders/', EventReminderListAPI.as_view(), name='event-reminders-list'),
+    path('api/goals/', GoalListAPI.as_view(), name='goals-list'),
+    path('api/tasks/', TaskListAPI.as_view(), name='tasks-list'),
 ]

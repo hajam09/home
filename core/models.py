@@ -189,13 +189,13 @@ class EventReminder(BaseModel):
 
     title = models.CharField(max_length=1024)
     message = models.TextField(blank=True, null=True)
-    emails = models.TextField(help_text="Comma separated email addresses")
+    emails = models.TextField(help_text='Comma separated email addresses')
     eventDateTime = models.DateTimeField()
     startBeforeDays = models.PositiveIntegerField(null=True, blank=True,
-                                                  help_text="Days before event to start reminders (default = 2)")
-    intervalValue = models.PositiveIntegerField(help_text="Send reminder every X units")
+                                                  help_text='Days before event to start reminders (default = 2)')
+    intervalValue = models.PositiveIntegerField(help_text='Send reminder every X units')
     intervalUnit = models.CharField(max_length=10, choices=IntervalUnit.choices)
-    nextReminderDateTime = models.DateTimeField(null=True, blank=True, help_text="Next scheduled reminder time")
+    nextReminderDateTime = models.DateTimeField(null=True, blank=True, help_text='Next scheduled reminder time')
     lastSentDate = models.DateField(null=True, blank=True)
     sentCountToday = models.PositiveIntegerField(default=0)
     completed = models.BooleanField(default=False)
@@ -223,3 +223,19 @@ class EventReminder(BaseModel):
 
     def getEmailList(self):
         return [e.strip() for e in self.emails.split(',') if e.strip()]
+
+
+class Goal(BaseModel):
+    name = models.CharField(max_length=2048)
+
+    def __str__(self):
+        return self.name
+
+
+class Task(models.Model):
+    goal = models.ForeignKey(Goal, related_name='tasks', on_delete=models.CASCADE)
+    name = models.CharField(max_length=2048)
+    completed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.name

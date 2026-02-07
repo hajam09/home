@@ -1,0 +1,232 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block content %}
+    <div class='container mt-5'>
+
+        <form class='mt-5' method='post'>
+            {% csrf_token %}
+            <div class='d-flex align-items-center'>
+                <input class='form-control mr-3' type='text' name='name' required
+                       placeholder='{% if request.GET.goal %}Task name (use , to add multiple){% else %}Goal name{% endif %}'>
+                <button type='submit' class='btn btn-primary'>Save</button>
+            </div>
+        </form>
+
+        {% if goals %}
+            <table class='table mt-5'>
+                <thead class='thead-dark'>
+                <tr>
+                    <th scope='col'>Goal</th>
+                    <th scope='col'>Date & Time</th>
+                    <th scope='col'>Completed Tasks</th>
+                    <th scope='col'>Total Tasks</th>
+                    <th scope='col'>Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for g in goals %}
+                    <tr>
+                        <td>
+                            <span class='badge {% if g.isCompleted %}badge-success{% else %}badge-primary{% endif %}'>{{ g.name }}</span>
+                        </td>
+                        <td>{{ g.createdDateTime }}</td>
+                        <td>{{ g.completedTasks }}</td>
+                        <td>{{ g.totalTasks }}</td>
+                        <td>
+                            <a href='/goals-and-tasks/?goal={{ g.id }}'
+                               class='btn btn-outline-primary btn-sm' role='button'>View</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+
+        {% if request.GET.goal and goal %}
+            <table class='table mt-5'>
+                <thead class='thead-dark'>
+                <tr>
+                    <th scope='col'>Goal</th>
+                    <th scope='col'>Date & Time</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td> {{ goal.name }} </td>
+                    <td>{{ goal.createdDateTime }}</td>
+                </tr>
+                </tbody>
+            </table>
+
+            <table class='table mt-5'>
+                <thead class='thead-dark'>
+                <tr>
+                    <th scope='col'>
+                        <div class='row'>
+                            <div class='col-md-auto'>Task</div>
+                            <div class='col' id='pb-container'></div>
+                        </div>
+                    </th>
+                </tr>
+                </thead>
+                <tbody id='list-of-tasks'>
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+
+    <script>
+
+        async function getTasksForGoal(goalId) {
+            const url = `/api/tasks/?goal=${goalId}`;
+            const response = await fetch(url);
+            return response.json();
+        }
+
+        function clearListOfTasks() {
+            const taskList = document.getElementById('list-of-tasks');
+            while (taskList.firstChild) {
+                taskList.removeChild(taskList.firstChild);
+            }
+        }
+
+        async function handleTaskStatusChange(taskId, completed) {
+            await fetch('/api/tasks/', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({task: taskId, completed: completed}),
+            });
+            clearListOfTasks();
+            fetchAndDisplayTasks();
+        }
+
+        function renderTasks(tasks, handleTaskStatusChange) {
+            const taskList = document.getElementById('list-of-tasks');
+            let completedTasks = 0;
+            let totalTasks = 0;
+
+            tasks.forEach(task => {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                const div = document.createElement('div');
+                div.className = 'form-check d-flex align-items-center';
+
+                // Checkbox
+                const inputCheckbox = document.createElement('input');
+                inputCheckbox.type = 'checkbox';
+                inputCheckbox.className = 'form-check-input';
+                inputCheckbox.id = `check-${task.id}`;
+                inputCheckbox.style.width = '25px';
+                inputCheckbox.style.height = '25px';
+                inputCheckbox.style.cursor = 'pointer';
+                inputCheckbox.checked = task.completed;
+
+                inputCheckbox.addEventListener('change', () => {
+                    handleTaskStatusChange(task.id, inputCheckbox.checked);
+                });
+
+                // Editable task name
+                const span = document.createElement('span');
+                span.className = 'ml-3';
+                span.textContent = task.name;
+                span.style.cursor = 'pointer';
+                span.style.fontSize = '1rem';
+
+                span.addEventListener('click', () => {
+                    const inputText = document.createElement('input');
+                    inputText.type = 'text';
+                    inputText.value = span.textContent;
+                    inputText.style.fontSize = '1rem';
+                    inputText.style.marginLeft = '10px';
+                    inputText.className = 'form-control form-control-sm';
+                    span.replaceWith(inputText);
+                    inputText.focus();
+
+                    inputText.addEventListener('blur', async () => {
+                        const newName = inputText.value.trim();
+                        if (newName && newName !== task.name) {
+                            await fetch('/api/tasks/', {
+                                method: 'PATCH',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': '{{ csrf_token }}',
+                                },
+                                body: JSON.stringify({task: task.id, name: newName}),
+                            });
+                            task.name = newName; // Update local copy
+                        }
+                        inputText.replaceWith(span);
+                        span.textContent = task.name; // show updated name
+                    });
+
+                    inputText.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            inputText.blur(); // trigger blur to save
+                        }
+                    });
+                });
+
+                div.appendChild(inputCheckbox);
+                div.appendChild(span);
+                td.appendChild(div);
+                tr.appendChild(td);
+                taskList.appendChild(tr);
+
+                if (task.completed)
+                    completedTasks++;
+                totalTasks++;
+            });
+
+            renderProgressBar(completedTasks, totalTasks);
+        }
+
+        function renderProgressBar(completedTasks, totalTasks) {
+            const pbContainer = document.getElementById('pb-container');
+            pbContainer.innerHTML = '';
+
+            if (totalTasks === 0) {
+                return;
+            }
+
+            const percentage = Math.round((completedTasks / totalTasks) * 100);
+            let colorClass = 'bg-danger';
+            if (percentage > 66) {
+                colorClass = 'bg-success';
+            } else if (percentage > 33) {
+                colorClass = 'bg-warning';
+            }
+
+            // Create progress wrapper
+            const progress = document.createElement('div');
+            progress.className = 'progress mt-1';
+            progress.style.display = 'block';
+
+            // Create progress bar
+            const progressBar = document.createElement('div');
+            progressBar.className = `progress-bar progress-bar-striped progress-bar-animated ${colorClass}`;
+            progressBar.setAttribute('role', 'progressbar');
+            progressBar.style.width = `${percentage}%`;
+            progressBar.textContent = `${completedTasks} / ${totalTasks}`;
+
+            // Assemble
+            progress.appendChild(progressBar);
+            pbContainer.appendChild(progress);
+        }
+
+        function fetchAndDisplayTasks() {
+            {% if request.GET.goal and goal %}
+                getTasksForGoal({{request.GET.goal}}).then(tasks => {
+                    renderTasks(tasks, handleTaskStatusChange);
+                });
+            {% endif %}
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            fetchAndDisplayTasks();
+        });
+    </script>
+
+{% endblock %}

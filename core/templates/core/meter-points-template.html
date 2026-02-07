@@ -2,9 +2,8 @@
 {% load static %}
 {% block content %}
     <div class="container mt-5">
-        <br>
         {% if meterPoints %}
-            <table class="table">
+            <table class="table mt-5">
                 <thead class="thead-dark">
                 <tr>
                     <th scope="col">Smart Card Number</th>
@@ -23,8 +22,8 @@
                         <td>{{ mp.utilityMarket }}</td>
                         <td>{{ mp.tariff }}</td>
                         <td>
-                            <a href="/energy-payment-upload/?meter-point={{ mp.identifier }}"
-                               class="btn btn-outline-primary btn-sm" role="button">Upload</a>
+                            <a href="/meter-points/?meter-point={{ mp.identifier }}"
+                               class="btn btn-outline-primary btn-sm" role="button">View</a>
                         </td>
                     </tr>
                 {% endfor %}
@@ -53,9 +52,7 @@
                 </tbody>
             </table>
 
-            <br>
-
-            <form method="post" enctype="multipart/form-data">
+            <form class="mt-5" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="d-flex align-items-center">
                     <div class="custom-file mr-2" style="flex: 1;">
@@ -106,6 +103,29 @@
                 </table>
             {% endif %}
 
+            <table class="table mt-5">
+                <thead class="thead-light">
+                <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Time</th>
+                    <th scope="col">Channel</th>
+                    <th scope="col">Top Up Code</th>
+                    <th scope="col">Amount</th>
+                </tr>
+                </thead>
+                <tbody>
+
+                {% for ep in energyPayments %}
+                    <tr>
+                        <td>{{ ep.date }}</td>
+                        <td>{{ ep.time }}</td>
+                        <td>{{ ep.get_channel_display }}</td>
+                        <td>{{ ep.topUpCode }}</td>
+                        <td>£{{ ep.amount }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
         {% endif %}
     </div>
 
