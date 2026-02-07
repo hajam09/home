@@ -1,29 +1,29 @@
 {% extends 'core/base.html' %}
 {% load static %}
 {% block content %}
-    <div class="container mt-5">
+    <div class='container mt-5'>
         {% if meterPoints %}
-            <table class="table mt-5">
-                <thead class="thead-dark">
+            <table class='table mt-5'>
+                <thead class='thead-dark'>
                 <tr>
-                    <th scope="col">Smart Card Number</th>
-                    <th scope="col">Identifier</th>
-                    <th scope="col">Utility Market</th>
-                    <th scope="col">Tariff</th>
-                    <th scope="col">Action</th>
+                    <th scope='col'>Smart Card Number</th>
+                    <th scope='col'>Identifier</th>
+                    <th scope='col'>Utility Market</th>
+                    <th scope='col'>Tariff</th>
+                    <th scope='col'>Action</th>
                 </tr>
                 </thead>
                 <tbody>
 
                 {% for mp in meterPoints %}
                     <tr>
-                        <th scope="row">{{ mp.smartCardNumber }}</th>
+                        <th scope='row'>{{ mp.smartCardNumber }}</th>
                         <td>{{ mp.identifier }}</td>
                         <td>{{ mp.utilityMarket }}</td>
                         <td>{{ mp.tariff }}</td>
                         <td>
-                            <a href="/meter-points/?meter-point={{ mp.identifier }}"
-                               class="btn btn-outline-primary btn-sm" role="button">View</a>
+                            <a href='/meter-points/?meter-point={{ mp.identifier }}'
+                               class='btn btn-outline-primary btn-sm' role='button'>View</a>
                         </td>
                     </tr>
                 {% endfor %}
@@ -33,18 +33,18 @@
         {% endif %}
 
         {% if meterPoint %}
-            <table class="table">
-                <thead class="thead-dark">
+            <table class='table'>
+                <thead class='thead-dark'>
                 <tr>
-                    <th scope="col">Smart Card Number</th>
-                    <th scope="col">Identifier</th>
-                    <th scope="col">Utility Market</th>
-                    <th scope="col">Tariff</th>
+                    <th scope='col'>Smart Card Number</th>
+                    <th scope='col'>Identifier</th>
+                    <th scope='col'>Utility Market</th>
+                    <th scope='col'>Tariff</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr>
-                    <th scope="row">{{ meterPoint.smartCardNumber }}</th>
+                    <th scope='row'>{{ meterPoint.smartCardNumber }}</th>
                     <td>{{ meterPoint.identifier }}</td>
                     <td>{{ meterPoint.utilityMarket }}</td>
                     <td>{{ meterPoint.tariff }}</td>
@@ -52,22 +52,34 @@
                 </tbody>
             </table>
 
-            <form class="mt-5" method="post" enctype="multipart/form-data">
+            <form class='mt-5' method='post' enctype='multipart/form-data'>
                 {% csrf_token %}
-                <div class="d-flex align-items-center">
-                    <div class="custom-file mr-2" style="flex: 1;">
-                        <input type="file" name="payments" class="custom-file-input" id="fileUpload" required>
-                        <label class="custom-file-label" for="fileUpload">Choose file</label>
+                <div class='d-flex align-items-center'>
+                    <div class='custom-file mr-2' style='flex: 1;'>
+                        <input type='file' name='payments' class='custom-file-input' id='fileUpload' required>
+                        <label class='custom-file-label' for='fileUpload'>Choose file</label>
                     </div>
-                    <button type="submit" class="btn btn-primary">Upload</button>
+                    <button type='submit' class='btn btn-primary'>Upload</button>
                 </div>
             </form>
+            <div class="row mt-2">
+                <div class="col-md-auto">
+                    <button type='button' class='btn btn-outline-primary'
+                            onclick='downloadSampleCSV()'> Download Sample File
+                    </button>
+                </div>
+                <div class="col-md-auto">
+                    <button type='button' class='btn btn-outline-primary'
+                            onclick='exportData()'> Export
+                    </button>
+                </div>
+            </div>
 
             {% if uploadPreview %}
                 <hr>
                 <h5>Upload Preview:</h5>
                 <p>Created: {{ createdCount }} | Skipped/Errors: {{ skippedCount }}</p>
-                <table class="table table-bordered table-sm">
+                <table class='table table-bordered table-sm'>
                     <thead>
                     <tr>
                         <th>Id</th>
@@ -81,7 +93,7 @@
                     </thead>
                     <tbody>
                     {% for row in uploadPreview %}
-                        <tr class="{% if row.error %}table-danger{% elif row.created %}table-success{% else %}table-warning{% endif %}">
+                        <tr class='{% if row.error %}table-danger{% elif row.created %}table-success{% else %}table-warning{% endif %}'>
                             <td>{{ row.rowNumber }}</td>
                             <td>{{ row.data.date }}</td>
                             <td>{{ row.data.time }}</td>
@@ -103,14 +115,14 @@
                 </table>
             {% endif %}
 
-            <table class="table mt-5">
-                <thead class="thead-light">
+            <table class='table mt-4'>
+                <thead class='thead-light'>
                 <tr>
-                    <th scope="col">Date</th>
-                    <th scope="col">Time</th>
-                    <th scope="col">Channel</th>
-                    <th scope="col">Top Up Code</th>
-                    <th scope="col">Amount</th>
+                    <th scope='col'>Date</th>
+                    <th scope='col'>Time</th>
+                    <th scope='col'>Channel</th>
+                    <th scope='col'>Top Up Code</th>
+                    <th scope='col'>Amount</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -118,7 +130,7 @@
                 {% for ep in energyPayments %}
                     <tr>
                         <td>{{ ep.date }}</td>
-                        <td>{{ ep.time|date:"H:i" }}</td>
+                        <td>{{ ep.time|date:'H:i' }}</td>
                         <td>{{ ep.get_channel_display }}</td>
                         <td>{{ ep.topUpCode }}</td>
                         <td>£{{ ep.amount }}</td>
@@ -129,11 +141,43 @@
         {% endif %}
     </div>
 
+    <script src='https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js'></script>
     <script>
         document.querySelector('#fileUpload').addEventListener('change', function (e) {
             let fileName = e.target.files[0].name;
             let nextSibling = e.target.nextElementSibling;
             nextSibling.innerText = fileName;
         });
+
+        function downloadSampleCSV() {
+            const records = [
+                ['date', 'time', 'channel', 'topUpCode', 'amount'],
+                ['01/01/26', '01:00', 'APP', '13991450116193100541', '50.00']
+            ];
+
+            const csvContent = records.map(row => row.join(',')).join('\n');
+            const blob = new Blob([csvContent], {type: 'text/csv'});
+            saveAs(blob, 'energy.csv');
+        }
+
+        function exportData() {
+            let records = [
+                ['date', 'time', 'channel', 'topUpCode', 'amount']
+            ];
+
+            {% for ep in energyPayments %}
+                records.push([
+                    '{{ ep.date|date:"d/m/y" }}',
+                    '{{ ep.time|date:'H:i' }}',
+                    '{{ ep.channel }}',
+                    '{{ ep.topUpCode }}',
+                    '{{ ep.amount }}'
+                ])
+            {% endfor %}
+
+            const csvContent = records.map(row => row.join(',')).join('\n');
+            const blob = new Blob([csvContent], {type: 'text/csv'});
+            saveAs(blob, '{{ meterPoint.utilityMarket }}_{{ meterPoint.identifier }}.csv');
+        }
     </script>
 {% endblock %}
