@@ -185,7 +185,7 @@
             fetch('{% url 'core:v1-energy-payments-analytics-api' %}')
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('average_cost_per_month_for_all_utilities').innerHTML = '£' + data.average_cost_per_month_for_all_utilities;
+                    document.getElementById('average_cost_per_month_for_all_utilities').innerHTML = '£' + data.average_cost_per_month_for_all_utilities.toFixed(2);
                     document.getElementById('average_cost_per_month_for_electricity').innerHTML = '£' + data.average_cost_per_month_for_electricity.toFixed(2);
                     document.getElementById('average_cost_per_month_for_gas').innerHTML = '£' + data.average_cost_per_month_for_gas.toFixed(2);
                     document.getElementById('total_cost_for_all_utilities').innerHTML = '£' + data.total_cost_for_all_utilities.toFixed(2);

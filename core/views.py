@@ -107,7 +107,7 @@ def meterPointsView(request):
             try:
                 # Parse date and time
                 dateObj = datetime.strptime(row['date'], '%d/%m/%y').date()
-                timeObj = datetime.strptime(row['time'], '%I:%M %p').time()
+                timeObj = datetime.strptime(row['time'], '%H:%M').time()
 
                 # Create or skip if exists
                 payment, created = EnergyPayment.objects.get_or_create(

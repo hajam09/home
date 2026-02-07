@@ -118,7 +118,7 @@
                 {% for ep in energyPayments %}
                     <tr>
                         <td>{{ ep.date }}</td>
-                        <td>{{ ep.time }}</td>
+                        <td>{{ ep.time|date:"H:i" }}</td>
                         <td>{{ ep.get_channel_display }}</td>
                         <td>{{ ep.topUpCode }}</td>
                         <td>£{{ ep.amount }}</td>
