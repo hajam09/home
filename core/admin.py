@@ -17,6 +17,7 @@ from core.models import (
     Tag,
     EventReminder,
     MeterPoint,
+    MeterReading,
     Goal,
     Task
 )
@@ -123,6 +124,19 @@ class MeterPointAdmin(admin.ModelAdmin):
         'tariff',
     ]
     inlines = [EnergyPaymentInline]
+
+
+@admin.register(MeterReading)
+class MeterReadingAdmin(admin.ModelAdmin):
+    list_display = [field.name for field in MeterReading._meta.get_fields()]
+    list_filter = [
+        'meterPoint'
+    ]
+    search_fields = (
+        'meterPoint__smartCardNumber',
+        'meterPoint__identifier',
+        'meterPoint__utilityMarket',
+    )
 
 
 @admin.register(InventoryItem)

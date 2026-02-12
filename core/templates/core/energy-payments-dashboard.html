@@ -2,10 +2,8 @@
 {% load static %}
 {% block content %}
     <link rel='stylesheet' href='https://cdn.datatables.net/2.0.0/css/dataTables.dataTables.css'/>
-    <br>
-    <div class='container' style='color: black; max-width: 90%'>
-        <br>
-        <div class='row'>
+    <div class='container mt-5' style='color: black; max-width: 90%'>
+        <div class='row mt-3'>
             <div class='col-sm-4'>
                 <div class='card'>
                     <div class='card-body'>
@@ -32,8 +30,7 @@
             </div>
         </div>
 
-        <br>
-        <div class='row'>
+        <div class='row mt-3'>
             <div class='col-sm-4'>
                 <div class='card'>
                     <div class='card-body'>
@@ -60,8 +57,7 @@
             </div>
         </div>
 
-        <br>
-        <div class='row'>
+        <div class='row mt-3'>
             <div class='col-sm-4'>
                 <div class='card'>
                     <div class='card-body'>
@@ -88,16 +84,20 @@
             </div>
         </div>
 
-        <br>
-        <div class='row'>
+        <div class='row mt-3'>
             <canvas id='cost_by_each_month_for_all_utilities'></canvas>
         </div>
-        <br>
-        <div class='row'>
+
+        <div class='row mt-3'>
             <canvas id='cost_by_each_month_for_electricity__and__cost_by_each_month_for_gas'></canvas>
         </div>
-        <br>
-        <br>
+
+        <div class='row mt-3'>
+            <canvas id='electricity_meter_readings'></canvas>
+        </div>
+        <div class='row mt-3'>
+            <canvas id='gas_meter_readings'></canvas>
+        </div>
     </div>
     <script src='https://cdn.jsdelivr.net/npm/chart.js@3.0.0/dist/chart.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js'></script>
@@ -242,6 +242,57 @@
                 .catch(error => {
                     console.error('Error fetching data:', error);
                 });
+
+            fetch('{% url 'core:v1-meter-readings-analytics-api' %}')
+                .then(response => response.json())
+                .then(data => {
+                    generate_meter_readings_graph(data.electricity.dates, data.electricity.readings, 'electricity_meter_readings', 'blue', 'Electricity Reading (kWh)');
+                    generate_meter_readings_graph(data.gas.dates, data.gas.readings,'gas_meter_readings', 'green', 'Gas Reading (m³)');
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                });
+
+        }
+
+        function generate_meter_readings_graph(xLabels, yData, element, borderColor, label) {
+
+            const data = {
+                labels: xLabels,
+                datasets: [{
+                    label: label,
+                    data: yData,
+                    borderColor: borderColor,
+                    tension: 0.2,
+                    fill: true,
+                    pointRadius: 3
+                }]
+            };
+
+            const config = {
+                type: 'line',
+                data: data,
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {position: 'top'},
+                        tooltip: {mode: 'index', intersect: false}
+                    },
+                    interaction: {mode: 'nearest', intersect: false},
+                    scales: {
+                        x: {
+                            title: {display: true, text: 'Date'},
+                            ticks: {maxRotation: 90, minRotation: 45}
+                        },
+                        y: {
+                            title: {display: true, text: 'm³'},
+                            beginAtZero: false
+                        }
+                    }
+                }
+            };
+
+            new Chart(document.getElementById(element), config);
         }
     </script>
 {% endblock %}

@@ -1,16 +1,20 @@
 import csv
 from datetime import datetime
+from io import StringIO, TextIOWrapper
 
 from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import BooleanField, Case, Count, DateTimeField, F, Q, Value, When
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect
 from django.utils.timezone import now
+from django.views import View
+from django.views.generic import ListView
 
 from core import service
-from core.models import EnergyPayment, MeterPoint, Goal, Task
+from core.models import EnergyPayment, MeterPoint, Goal, Task, MeterReading
 
 
 def indexView(request):
@@ -77,72 +81,105 @@ def indexView(request):
     return render(request, 'core/index.html', context)
 
 
-@login_required
-def meterPointsView(request):
-    meterPoints = []
+class MeterPointsView(LoginRequiredMixin, ListView):
+    model = MeterPoint
+    template_name = 'core/meter-points.html'
+    context_object_name = 'meterPoints'
+
+
+class MeterPointView(View):
+    templateName = 'core/meter-point.html'
+
+    tab = None
     meterPoint = None
-    uploadPreview = []  # To store row info and errors
-    energyPayments = []
+    table = None
+    columns = None
 
-    if not request.GET.get('meter-point'):
-        meterPoints = MeterPoint.objects.all()
-    else:
-        meterPoint = MeterPoint.objects.filter(identifier=request.GET.get('meter-point').strip()).first()
-        energyPayments = EnergyPayment.objects.filter(meterPoint=meterPoint)
+    def dispatch(self, request, *args, **kwargs):
+        self.tab = request.GET.get('tab', 'payments')
+        self.meterPoint = MeterPoint.objects.get(identifier=kwargs.get('identifier'))
 
-    createdCount = 0
-    skippedCount = 0
+        if self.tab == 'payments':
+            self.table = EnergyPayment.objects.filter(meterPoint=self.meterPoint)
+            self.columns = {'date', 'time', 'channel', 'topUpCode', 'amount'}
+        else:
+            self.table = MeterReading.objects.filter(meterPoint=self.meterPoint)
+            self.columns = {'date', 'reading'}
+        return super().dispatch(request, *args, **kwargs)
 
-    if request.method == 'POST' and request.FILES.get('payments') and meterPoint:
-        paymentsFile = request.FILES.get('payments')
-        if not paymentsFile.name.endswith('.csv'):
-            messages.warning(request, 'The wrong file type was uploaded')
-            return HttpResponseRedirect(request.path_info)
+    def get(self, request, identifier):
+        context = {
+            'meterPoint': self.meterPoint,
+            'table': self.table,
+        }
+        return render(request, self.templateName, context)
 
-        decodedFile = paymentsFile.read().decode('utf-8').splitlines()
-        reader = csv.DictReader(decodedFile)
+    def data(self, request):
+        if self.tab == 'payments':
+            dt = datetime.fromisoformat(request.POST['datetime'])
+            data = {
+                'date': dt.date(),
+                'time': dt.time(),
+                'channel': request.POST['channel'],
+                'topUpCode': request.POST['topUpCode'],
+                'amount': request.POST['amount'],
+            }
+            return data
+        elif self.tab == 'readings':
+            data = {
+                'date': datetime.strptime(request.POST['date'], '%Y-%m-%d').date(),
+                'reading': request.POST['reading']
+            }
+            return data
 
-        for i, row in enumerate(reader, start=1):
-            rowStatus = {'rowNumber': None, 'data': row, 'error': None, 'created': False}
+    def post(self, request, identifier):
+        context = {
+            'meterPoint': self.meterPoint,
+            'table': self.table,
+        }
+
+        if self.tab in ['payments', 'readings'] and 'file' in request.POST:
+            file = request.FILES.get('file')
+            if not file.name.endswith('.csv'):
+                messages.warning(request, 'Only CSV files are accepted!')
+                return HttpResponseRedirect(request.path_info)
+
+            reader = csv.DictReader(TextIOWrapper(file.file, encoding='utf-8'))
+            if not self.columns.issubset(set(reader.fieldnames)):
+                messages.warning(request, f'Incorrect file is uploaded for {self.tab}!')
+                return HttpResponseRedirect(request.path_info)
+
+            model = EnergyPayment if self.tab == 'payments' else MeterReading
+            response = service.parseCsvFile(reader, model, self.meterPoint)
+            context.update(response)
+
+        elif self.tab in ['payments', 'readings'] and 'text' in request.POST:
+            reader = csv.DictReader(StringIO(request.POST.get('data')))
+            if not self.columns.issubset(set(reader.fieldnames)):
+                messages.warning(request, f'Incorrect date supplied for {self.tab}!')
+                return HttpResponseRedirect(request.path_info)
+
+            model = EnergyPayment if self.tab == 'payments' else MeterReading
+            response = service.parseCsvFile(reader, model, self.meterPoint)
+            context.update(response)
+
+        elif self.tab in ['payments', 'readings'] and 'form' in request.POST:
+            data = self.data(request)
+            rowStatus = {'rowNumber': None, 'data': data, 'error': None, 'created': False}
+            model = EnergyPayment if self.tab == 'payments' else MeterReading
+
             try:
-                # Parse date and time
-                dateObj = datetime.strptime(row['date'], '%d/%m/%y').date()
-                timeObj = datetime.strptime(row['time'], '%H:%M').time()
-
-                # Create or skip if exists
-                payment, created = EnergyPayment.objects.get_or_create(
-                    date=dateObj,
-                    time=timeObj,
-                    channel=service.mapChannelForEnergyPayment(row.get('channel')),
-                    topUpCode=row.get('topUpCode') or None,
-                    amount=row.get('amount'),
-                    meterPoint=meterPoint
+                obj, created = model.objects.get_or_create(
+                    meterPoint=self.meterPoint,
+                    **data
                 )
-
                 rowStatus['created'] = created
-                rowStatus['rowNumber'] = payment.id
-                if created:
-                    createdCount += 1
-                else:
-                    skippedCount += 1
-
+                rowStatus['rowNumber'] = obj.id
             except Exception as e:
                 rowStatus['error'] = str(e)
-                skippedCount += 1
 
-            uploadPreview.append(rowStatus)
-
-        messages.success(request, f'Upload finished. Created: {createdCount}, Skipped/Errors: {skippedCount}')
-
-    context = {
-        'meterPoints': meterPoints,
-        'meterPoint': meterPoint,
-        'uploadPreview': uploadPreview,
-        'createdCount': createdCount,
-        'skippedCount': skippedCount,
-        'energyPayments': energyPayments,
-    }
-    return render(request, 'core/meter-points-template.html', context)
+            context['uploadPreview'] = [rowStatus]
+        return render(request, self.templateName, context)
 
 
 @login_required

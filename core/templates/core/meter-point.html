@@ -1,0 +1,299 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block content %}
+    <div class='container mt-5'>
+
+        <table class='table'>
+            <thead class='thead-dark'>
+            <tr>
+                <th scope='col'>Smart Card Number</th>
+                <th scope='col'>Identifier</th>
+                <th scope='col'>Utility Market</th>
+                <th scope='col'>Tariff</th>
+                <th scope='col'>Action</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <th scope='row'>{{ meterPoint.smartCardNumber }}</th>
+                <td>{{ meterPoint.identifier }}</td>
+                <td>{{ meterPoint.utilityMarket }}</td>
+                <td>{{ meterPoint.tariff }}</td>
+                <td>
+                    <button type='button' class='btn btn-outline-primary'
+                            onclick='downloadSampleCSV()'> Download Sample File
+                    </button>
+                    <button type='button' class='btn btn-outline-primary'
+                            onclick='exportData()'> Export
+                    </button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <ul class='nav nav-tabs' id='uploadTabs' role='tablist'>
+            <li class='nav-item'>
+                <a class='nav-link' id='file-tab' data-toggle='tab' href='#file' role='tab'>File</a>
+            </li>
+            <li class='nav-item'>
+                <a class='nav-link' id='form-tab' data-toggle='tab' href='#form' role='tab'> Form </a>
+            </li>
+            <li class='nav-item'>
+                <a class='nav-link' id='text-tab' data-toggle='tab' href='#text' role='tab'>Text</a>
+            </li>
+        </ul>
+        <div class='tab-content' id='uploadTabsContent'>
+            <div class='tab-pane fade' id='file' role='tabpanel'>
+                <form class='mt-5' method='post' enctype='multipart/form-data'>
+                    <input name='file' hidden>
+                    {% csrf_token %}
+                    <div class='d-flex align-items-center'>
+                        <div class='custom-file mr-2' style='flex: 1;'>
+                            <input type='file' name='file' class='custom-file-input' id='fileUpload' required>
+                            <label class='custom-file-label' for='fileUpload'>Choose file</label>
+                        </div>
+                        <button type='submit' class='btn btn-primary'>Upload</button>
+                    </div>
+                </form>
+            </div>
+            <div class='tab-pane fade' id='form' role='tabpanel'>
+                <form class='mt-5' method='post'>
+                    <input name='form' hidden>
+                    {% csrf_token %}
+                    <div class='row'>
+                        {% if request.GET.tab == 'readings' %}
+                            <div class='col'>
+                                <input class='form-control' type='date' name='date' required>
+                            </div>
+                            <div class='col'>
+                                <input class='form-control' type='number' name='reading' step='0.01' min='0' required>
+                            </div>
+                        {% else %}
+                            <div class='col'>
+                                <input class='form-control' type='datetime-local' name='datetime' required>
+                            </div>
+                            <div class='col'>
+                                <select class="form-control" name="channel">
+                                    <option value="APP" selected>App</option>
+                                    <option value="ONLINE">Online</option>
+                                    <option value="OTHER">Other</option>
+                                    <option value="PEAK_SAVE">PeakSave</option>
+                                    <option value="PORTAL">Portal</option>
+                                    <option value="WARM_HOME_DISCOUNT">Warm Home Discount</option>
+                                    <option value="WEB">Web</option>
+                                </select>
+                            </div>
+                            <div class='col'>
+                                <input class='form-control' type='text' name='topUpCode' placeholder='Top Up Code'
+                                       required>
+                            </div>
+                            <div class='col'>
+                                <input class='form-control' type='number' name='amount' step='0.01' min='0'
+                                       placeholder='Amount' required>
+                            </div>
+                        {% endif %}
+
+                        <div class='col-md-auto'>
+                            <button type='submit' class='btn btn-primary'>Upload</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class='tab-pane fade' id='text' role='tabpanel'>
+                <form class='mt-5' method='post'>
+                    <input name='text' hidden>
+                    {% csrf_token %}
+                    <div class='row'>
+                        <div class='col'>
+                            <textarea class='form-control' rows='5' name='data' required></textarea>
+                        </div>
+                        <div class='col-md-auto'>
+                            <button type='submit' class='btn btn-primary'>Upload</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="row mt-5">
+            <div class="col">
+                <a class="btn btn btn-outline-dark btn-block"
+                   href="/meter-points/{{ meterPoint.identifier }}/?tab=payments" role="button">Payments</a>
+            </div>
+            <div class="col">
+                <a class="btn btn btn-outline-dark btn-block"
+                   href="/meter-points/{{ meterPoint.identifier }}/?tab=readings" role="button">Readings</a>
+            </div>
+        </div>
+
+        {% if uploadPreview %}
+            <h5 class="mt-3">Upload Preview:</h5>
+            <p>Created: {{ createdCount }} | Skipped/Errors: {{ skippedCount }}</p>
+            <table class='table table-bordered table-sm'>
+                <thead>
+                <tr>
+                    {% if request.GET.tab == 'readings' %}
+                        <th>Id</th>
+                        <th>Date</th>
+                        <th>Reading</th>
+                        <th>Status</th>
+                    {% else %}
+                        <th>Id</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Channel</th>
+                        <th>TopUp Code</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    {% endif %}
+                </tr>
+                </thead>
+                <tbody>
+                {% for row in uploadPreview %}
+                    <tr class='{% if row.error %}table-danger{% elif row.created %}table-success{% else %}table-warning{% endif %}'>
+                        {% if request.GET.tab == 'readings' %}
+                            <td>{{ row.rowNumber }}</td>
+                            <td>{{ row.data.date }}</td>
+                            <td>{{ row.data.reading }}</td>
+                            <td>
+                                {% if row.error %}
+                                    Error: {{ row.error }}
+                                {% elif row.created %}
+                                    Created
+                                {% else %}
+                                    Skipped
+                                {% endif %}
+                            </td>
+                        {% else %}
+                            <td>{{ row.rowNumber }}</td>
+                            <td>{{ row.data.date }}</td>
+                            <td>{{ row.data.time }}</td>
+                            <td>{{ row.data.channel }}</td>
+                            <td>{{ row.data.topUpCode }}</td>
+                            <td>{{ row.data.amount }}</td>
+                            <td>
+                                {% if row.error %}
+                                    Error: {{ row.error }}
+                                {% elif row.created %}
+                                    Created
+                                {% else %}
+                                    Skipped
+                                {% endif %}
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+
+        <table class='table mt-5'>
+            <thead class='thead-light'>
+            <tr>
+                {% if request.GET.tab == 'readings' %}
+                    <th scope='col'>Date</th>
+                    <th scope='col'>Reading</th>
+                {% else %}
+                    <th scope='col'>Date</th>
+                    <th scope='col'>Time</th>
+                    <th scope='col'>Channel</th>
+                    <th scope='col'>Top Up Code</th>
+                    <th scope='col'>Amount</th>
+                {% endif %}
+            </tr>
+            </thead>
+            <tbody>
+            {% if request.GET.tab == 'readings' %}
+                {% for i in table %}
+                    <tr>
+                        <td>{{ i.date }}</td>
+                        <td>{{ i.reading }}</td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                {% for i in table %}
+                    <tr>
+                        <td>{{ i.date }}</td>
+                        <td>{{ i.time|date:'H:i' }}</td>
+                        <td>{{ i.get_channel_display }}</td>
+                        <td>{{ i.topUpCode }}</td>
+                        <td>£{{ i.amount }}</td>
+                    </tr>
+                {% endfor %}
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
+    <script src='https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js'></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const url = new window.URL(window.location.href);
+            const tab = url.searchParams.get('tab');
+            if (!tab) {
+                url.searchParams.set('tab', 'payments');
+                history.replaceState(null, '', url);
+            }
+        });
+
+        document.querySelector('#fileUpload').addEventListener('change', function (e) {
+            let fileName = e.target.files[0].name;
+            let nextSibling = e.target.nextElementSibling;
+            nextSibling.innerText = fileName;
+        });
+
+        function downloadSampleCSV() {
+            let records;
+            let fileName;
+
+            {% if request.GET.tab == 'readings' %}
+                records = [
+                    ['date', 'reading'],
+                    ['07/02/2026', '1234.5']
+                ];
+                fileName = 'readings.csv';
+            {% else %}
+                records = [
+                    ['date', 'time', 'channel', 'topUpCode', 'amount'],
+                    ['01/01/26', '01:00', 'APP', '13991450116193100541', '50.00']
+                ];
+                fileName = 'energy.csv';
+            {% endif %}
+
+            const csvContent = records.map(row => row.join(',')).join('\n');
+            const blob = new Blob([csvContent], {type: 'text/csv'});
+            saveAs(blob, fileName);
+        }
+
+        function exportData() {
+            let records = [];
+            let fileName;
+
+            {% if request.GET.tab == 'readings' %}
+                records.push(['date', 'reading']);
+                {% for i in table %}
+                    records.push([
+                        '{{ i.date|date:"d/m/y" }}',
+                        '{{ i.reading }}'
+                    ]);
+                {% endfor %}
+                fileName = 'reading_{{ meterPoint.utilityMarket }}_{{ meterPoint.identifier }}.csv';
+            {% else %}
+                records.push(['date', 'time', 'channel', 'topUpCode', 'amount']);
+                {% for i in table %}
+                    records.push([
+                        '{{ i.date|date:"d/m/y" }}',
+                        '{{ i.time|date:"H:i" }}',
+                        '{{ i.channel }}',
+                        '{{ i.topUpCode }}',
+                        '{{ i.amount }}'
+                    ]);
+                {% endfor %}
+                fileName = 'payment_{{ meterPoint.utilityMarket }}_{{ meterPoint.identifier }}.csv';
+            {% endif %}
+
+            const csvContent = records.map(row => row.join(',')).join('\n');
+            const blob = new Blob([csvContent], {type: 'text/csv'});
+            saveAs(blob, fileName);
+        }
+    </script>
+{% endblock %}

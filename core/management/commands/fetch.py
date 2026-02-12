@@ -9,6 +9,7 @@ from core.models import (
     InventoryItem,
     MeterPoint,
     EnergyPayment,
+    MeterReading,
     Cat,
     EventReminder,
     Goal,
@@ -20,10 +21,15 @@ class Command(BaseCommand):
     BASE_URL = 'https://barkinghome.pythonanywhere.com/api/'
 
     def request(self, url):
-        return requests.get(
-            url=self.BASE_URL + url,
-            auth=(config('ADMIN_USERNAME', cast=str), config('ADMIN_PASSWORD', cast=str))
-        ).json()
+        try:
+            response = requests.get(
+                url=self.BASE_URL + url,
+                auth=(config('ADMIN_USERNAME', cast=str), config('ADMIN_PASSWORD', cast=str))
+            )
+            response.raise_for_status()
+            return response.json()
+        except requests.RequestException:
+            return []
 
     def log(self, value):
         self.stdout.write(f'\n{value}\n')
@@ -134,6 +140,19 @@ class Command(BaseCommand):
             ]
         )
         self.log(f'Fetched {len(energyPayments)} EnergyPayment objects.')
+
+        self.log('Fetching MeterReading objects...')
+        meterReadings = MeterReading.objects.bulk_create(
+            [
+                MeterReading(
+                    meterPoint=meterPoints.get(item.get('meterPointIdentifier')),
+                    date=item.get('date'),
+                    reading=item.get('reading'),
+                )
+                for item in self.request('meter-readings/')
+            ]
+        )
+        self.log(f'Fetched {len(meterReadings)} MeterReading objects.')
 
         self.log('Fetching Cat objects...')
         tagMap = []

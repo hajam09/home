@@ -31,6 +31,7 @@ from core.models import (
     InventoryItem,
     MeterPoint,
     EnergyPayment,
+    MeterReading,
     Cat,
     EventReminder,
     Goal,
@@ -261,6 +262,39 @@ class EnergyPaymentAnalyticsApiVersion1(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
 
+class MeterReadingAnalyticsApiVersion1(APIView):
+    def base_queryset(self):
+        return MeterReading.objects.select_related('meterPoint').order_by('date')
+
+    def electricity_filter(self):
+        return Q(meterPoint__utilityMarket=MeterPoint.UtilityMarket.ELECTRICITY)
+
+    def gas_filter(self):
+        return Q(meterPoint__utilityMarket=MeterPoint.UtilityMarket.GAS)
+
+    def get(self, request):
+        qs = self.base_queryset()
+
+        electricity_qs = qs.filter(self.electricity_filter())
+        gas_qs = qs.filter(self.gas_filter())
+
+        electricity_data = {
+            "dates": [r.date.strftime("%d/%m/%Y") for r in electricity_qs],
+            "readings": [float(r.reading) for r in electricity_qs],
+        }
+
+        gas_data = {
+            "dates": [r.date.strftime("%d/%m/%Y") for r in gas_qs],
+            "readings": [float(r.reading) for r in gas_qs],
+        }
+
+        data = {
+            "electricity": electricity_data,
+            "gas": gas_data
+        }
+        return Response(data, status=status.HTTP_200_OK)
+
+
 class TagListAPI(ListAPIView):
     class TagSerializer(serializers.ModelSerializer):
         class Meta:
@@ -332,6 +366,19 @@ class EnergyPaymentListAPI(ListAPIView):
 
     queryset = EnergyPayment.objects.all().order_by('date', 'time', 'id')
     serializer_class = EnergyPaymentSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class MeterReadingListAPI(ListAPIView):
+    class MeterReadingSerializer(serializers.ModelSerializer):
+        meterPointIdentifier = serializers.CharField(source='meterPoint.identifier', read_only=True)
+
+        class Meta:
+            model = MeterReading
+            fields = ['id', 'date', 'reading', 'meterPointIdentifier']
+
+    queryset = MeterReading.objects.all().order_by('date', 'id')
+    serializer_class = MeterReadingSerializer
     permission_classes = [IsAuthenticated]
 
 

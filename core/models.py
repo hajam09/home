@@ -129,10 +129,10 @@ class MeterPoint(models.Model):
         STANDARD = 'STANDARD', _('Standard')
         SAFEGUARD_PAYG = 'SAFEGUARD_PAYG', _('Safeguard PAYG')
 
-    smartCardNumber = models.CharField(max_length=64, blank=True, null=True)
-    identifier = models.CharField(max_length=64, blank=True, null=True, unique=True)
-    utilityMarket = models.CharField(max_length=64, blank=True, null=True, choices=UtilityMarket.choices)
-    tariff = models.CharField(max_length=64, blank=True, null=True, choices=Tariff.choices)
+    smartCardNumber = models.CharField(max_length=64)
+    identifier = models.CharField(max_length=64, unique=True)
+    utilityMarket = models.CharField(max_length=64, choices=UtilityMarket.choices)
+    tariff = models.CharField(max_length=64, choices=Tariff.choices)
 
     class Meta:
         verbose_name = 'Meter Point'
@@ -157,14 +157,25 @@ class EnergyPayment(models.Model):
     channel = models.CharField(max_length=32, blank=True, null=True, choices=Channel.choices)
     topUpCode = models.CharField(max_length=32, blank=True, null=True)
     amount = models.DecimalField(max_digits=6, decimal_places=2)
-    meterPoint = models.ForeignKey(MeterPoint, blank=True, null=True, on_delete=models.SET_NULL,
-                                   related_name='energyPaymentMeterPoint')
+    meterPoint = models.ForeignKey(MeterPoint, null=True, on_delete=models.SET_NULL, related_name='energyPayments')
 
     class Meta:
         ordering = ['-date', '-time']
         verbose_name = 'Energy Payment'
         verbose_name_plural = 'Energy Payments'
         unique_together = ('date', 'time', 'channel', 'topUpCode', 'amount', 'meterPoint')
+
+
+class MeterReading(models.Model):
+    meterPoint = models.ForeignKey(MeterPoint, null=True, on_delete=models.SET_NULL, related_name='meterReadings')
+    date = models.DateField()
+    reading = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        ordering = ['-date', '-id']
+        verbose_name = 'Meter Reading'
+        verbose_name_plural = 'Meter Readings'
+        unique_together = ('meterPoint', 'date', 'reading')
 
 
 class Cat(BaseModel):
