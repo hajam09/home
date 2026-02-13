@@ -213,12 +213,12 @@ class EnergyPaymentAnalyticsApiVersion1(APIView):
 
         # ---- Averages (monthly) ----
         avg_cost_all = self.average_from_monthlies(monthly_all)
-        avg_cost_elec = self.average_from_monthlies(monthly_electricity)
+        avg_cost_electricity = self.average_from_monthlies(monthly_electricity)
         avg_cost_gas = self.average_from_monthlies(monthly_gas)
 
         # ---- Totals ----
         total_cost_all = qs.aggregate(total=Sum('amount'))['total'] or 0
-        total_cost_elec = elec_qs.aggregate(total=Sum('amount'))['total'] or 0
+        total_cost_electricity = elec_qs.aggregate(total=Sum('amount'))['total'] or 0
         total_cost_gas = gas_qs.aggregate(total=Sum('amount'))['total'] or 0
 
         # ---- Yearly ----
@@ -226,32 +226,53 @@ class EnergyPaymentAnalyticsApiVersion1(APIView):
         yearly_electricity = list(self.yearly_costs(elec_qs))
         yearly_gas = list(self.yearly_costs(gas_qs))
 
+        total_annual_price = {
+            str(x['year'].year): [x['total_cost_per_year'], y['total_cost_per_year'], z['total_cost_per_year']]
+            for x, y, z in zip(yearly_all, yearly_electricity, yearly_gas)
+        }
+
         # ---- Payment behaviour ----
         payment_counts = {
-            'all': qs.count(),
-            'electricity': elec_qs.count(),
-            'gas': gas_qs.count(),
+            'All': qs.count(),
+            'Electricity': elec_qs.count(),
+            'Gas': gas_qs.count(),
         }
 
         # ---- Final response ----
         data = {
             # Averages
-            'average_cost_per_month_for_all_utilities': avg_cost_all,
-            'average_cost_per_month_for_electricity': avg_cost_elec,
-            'average_cost_per_month_for_gas': avg_cost_gas,
+            'avg_monthly_utilities': {
+                'title': 'Avg. Monthly Utilities',
+                'value': f'£{round(avg_cost_all, 2)}'
+            },
+            'avg_monthly_electricity': {
+                'title': 'Avg. Monthly Electricity',
+                'value': f'£{round(avg_cost_electricity, 2)}'
+            },
+            'avg_monthly_gas': {
+                'title': 'Avg. Monthly Gas',
+                'value': f'£{round(avg_cost_gas, 2)}'
+            },
 
             # Totals
-            'total_cost_for_all_utilities': total_cost_all,
-            'total_cost_for_electricity': total_cost_elec,
-            'total_cost_for_gas': total_cost_gas,
+            'total_utilities': {
+                'title': 'Total Utilities',
+                'value': f'£{round(total_cost_all, 2)}'
+            },
+            'total_electricity': {
+                'title': 'Total Electricity',
+                'value': f'£{round(total_cost_electricity, 2)}'
+            },
+            'total_gas': {
+                'title': 'Total Gas',
+                'value': f'£{round(total_cost_gas, 2)}'
+            },
 
             # Counts & behaviour
             'payment_counts': payment_counts,
 
             # Yearly totals
-            'total_cost_each_year_for_all_utilities': yearly_all,
-            'total_cost_each_year_for_electricity': yearly_electricity,
-            'total_cost_each_year_for_gas': yearly_gas,
+            'total_annual_price': total_annual_price,
 
             # Monthly breakdowns (charts)
             'cost_by_each_month_for_all_utilities': monthly_all,
