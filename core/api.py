@@ -13,7 +13,7 @@ from django.db.models import (
     Max,
     Min,
 )
-from django.db.models.functions import Round
+from django.db.models.functions import Round, ExtractYear
 from django.db.models.functions import (
     TruncMonth,
     TruncYear
@@ -103,10 +103,10 @@ class CatPurchasesAnalyticsApiVersion1(APIView):
 
         # ---- Time-based ----
         total_cost_each_year = (
-            qs.annotate(year=TruncYear('date'))
-            .values('year')
-            .annotate(total_cost_per_year=Sum('price'))
-            .order_by('year')
+            qs.annotate(Year=ExtractYear('date'))
+            .values('Year')
+            .annotate(Price=Sum('price'))
+            .order_by('Year')
         )
 
         monthly_spending = (
@@ -121,8 +121,8 @@ class CatPurchasesAnalyticsApiVersion1(APIView):
 
         # ---- Expensive purchases ----
         top_expensive_purchases = (
-            qs.annotate(rounded_price=Round(F('price'), precision=2))
-            .values('brand', 'rounded_price', 'retailer', 'date')
+            qs.annotate(Date=F('date'), Retailer=F('retailer'), Brand=F('brand'), Price=Round(F('price'), precision=2))
+            .values('Date', 'Retailer', 'Brand', 'Price')
             .order_by('-price')[:5]
         )
 
@@ -140,24 +140,64 @@ class CatPurchasesAnalyticsApiVersion1(APIView):
             .order_by('-date')
         )
 
+        all_purchase_detail = [
+            {
+                'ID': i['id'], 'Retailer': i['retailer'], 'Date': i['date'], 'Brand': i['brand'],
+                'Pouch Per Box': i['pouchPerBox'], 'Unit Weight': i['unitWeight'], 'Quantity': i['quantity'],
+                'Price': i['price'], 'Total Weight': i['totalWeight'], 'Price Per KG': i['pricePerKG']
+            }
+            for i in all_purchase_detail
+        ]
+
         # ---- Final response ----
         data = {
             # Same as V1
-            'total_spending': aggregates['total_spending'] or 0,
-            'total_purchases': qs.count(),
+            'total_spending': {
+                'title': 'Total Spending',
+                'value': f'£{round(aggregates["total_spending"] or 0, 2)}'
+            },
+            'number_of_purchases': {
+                'title': 'No. of Purchases',
+                'value': qs.count(),
+            },
+            'average_per_purchase': {
+                'title': 'Avg. per Purchase',
+                'value': f'£{round(aggregates["average_spend"] or 0, 2)}'
+            },
+            'average_monthly_spend': {
+                'title': 'Average Monthly Spend',
+                'value': f'£{round(average_spend_per_month, 2)}',
+            },
+
+            'most_common_retailer': {
+                'title': 'Most Frequently Used Retailer',
+                'value': most_common_retailer['retailer']
+            },
+            'total_weight_purchased': {
+                'title': 'Total Weight Purchased',
+                'value': f'{aggregates["total_unit_weight"]}g / {aggregates["total_unit_weight"] / 1000}kg'
+            },
+
+            'top_expensive_purchases': {
+                'title': 'Top Expensive Purchases',
+                'value': top_expensive_purchases,
+            },
+            'total_annual_cost': {
+                'title': 'Total Annual Cost',
+                'value': total_cost_each_year,
+            },
+
             'average_spend': aggregates['average_spend'] or 0,
             'average_spend_per_month': average_spend_per_month,
 
             'spending_amount_for_each_retailer': spending_amount_for_each_retailer,
             'spending_count_for_each_retailer': spending_count_for_each_retailer,
             'average_spending_for_each_retailer': average_spending_for_each_retailer,
-            'most_common_retailer': most_common_retailer,
 
-            'total_unit_weight_in_grams': aggregates['total_unit_weight'] or 0,
-
-            'top_expensive_purchases': top_expensive_purchases,
-            'total_cost_each_year': total_cost_each_year,
-            'all_purchase_detail': all_purchase_detail,
+            'all_purchase_detail': {
+                'title': 'Purchase List',
+                'value': all_purchase_detail
+            },
 
             'monthly_spending': monthly_spending,
         }
@@ -222,14 +262,20 @@ class EnergyPaymentAnalyticsApiVersion1(APIView):
         total_cost_gas = gas_qs.aggregate(total=Sum('amount'))['total'] or 0
 
         # ---- Yearly ----
-        yearly_all = list(self.yearly_costs(qs))
-        yearly_electricity = list(self.yearly_costs(elec_qs))
-        yearly_gas = list(self.yearly_costs(gas_qs))
-
-        total_annual_price = {
-            str(x['year'].year): [x['total_cost_per_year'], y['total_cost_per_year'], z['total_cost_per_year']]
-            for x, y, z in zip(yearly_all, yearly_electricity, yearly_gas)
-        }
+        total_annual_price = (
+            qs.annotate(year=ExtractYear('date'))
+            .values('year')
+            .annotate(
+                all_utilities=Sum('amount'),
+                electricity=Sum('amount', filter=self.electricity_filter()),
+                gas=Sum('amount', filter=self.gas_filter()),
+            )
+            .order_by('year')
+        )
+        total_annual_price = [
+            {'Year': i['year'], 'All Utilities': i['all_utilities'], 'Electricity': i['electricity'], 'Gas': i['gas']}
+            for i in total_annual_price
+        ]
 
         # ---- Payment behaviour ----
         payment_counts = {

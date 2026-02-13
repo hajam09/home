@@ -20,7 +20,7 @@ from core.api import (
 from core.views import (
     indexView,
     goalAndTasks,
-    MeterPointsView,
+    EnergyPaymentsDashboard,
     MeterPointView,
 )
 
@@ -40,13 +40,8 @@ urlpatterns = [
     ),
     path(
         'energy-payments-dashboard/',
-        TemplateView.as_view(template_name='core/energy-payments-dashboard.html'),
+        EnergyPaymentsDashboard.as_view(),
         name='energy-payments-dashboard'
-    ),
-    path(
-        'meter-points/',
-        MeterPointsView.as_view(),
-        name='meter-points-view'
     ),
     path(
         'meter-points/<slug:identifier>/',

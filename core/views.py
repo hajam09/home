@@ -81,9 +81,9 @@ def indexView(request):
     return render(request, 'core/index.html', context)
 
 
-class MeterPointsView(LoginRequiredMixin, ListView):
+class EnergyPaymentsDashboard(ListView):
     model = MeterPoint
-    template_name = 'core/meter-points.html'
+    template_name = 'core/energy-payments-dashboard.html'
     context_object_name = 'meterPoints'
 
 
