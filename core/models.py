@@ -192,6 +192,23 @@ class Cat(BaseModel):
         verbose_name_plural = 'Cats'
 
 
+class Event(BaseModel):
+    title = models.CharField(max_length=1024)
+    description = models.TextField(blank=True, null=True)
+    location = models.CharField(max_length=1024, blank=True, null=True)
+    startDateTime = models.DateTimeField()
+    endDateTime = models.DateTimeField()
+    completed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.title
+
+    class Meta:
+        verbose_name = 'Event'
+        verbose_name_plural = 'Events'
+        ordering = ['completed', 'startDateTime']
+
+
 class EventReminder(BaseModel):
     class IntervalUnit(models.TextChoices):
         MINUTES = 'minutes', 'Minutes'

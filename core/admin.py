@@ -15,6 +15,7 @@ from core.models import (
     InventoryItem,
     JournalEntry,
     Tag,
+    Event,
     EventReminder,
     MeterPoint,
     MeterReading,
@@ -72,6 +73,21 @@ class CatAdmin(admin.ModelAdmin):
     filter_horizontal = (
         'tags',
     )
+
+
+@admin.register(Event)
+class EventAdmin(admin.ModelAdmin):
+    list_display = ['title', 'location', 'startDateTime', 'endDateTime', 'completed']
+    search_fields = (
+        'title',
+        'description',
+        'location',
+        'startDateTime',
+        'endDateTime',
+    )
+    list_filter = [
+        'completed'
+    ]
 
 
 @admin.register(EventReminder)

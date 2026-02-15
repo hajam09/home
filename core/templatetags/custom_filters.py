@@ -15,6 +15,7 @@ def navigationPanel(request):
             linkItem('Admin', reverse('admin:index')),
             linkItem('Cat Purchases', reverse('core:cat-purchases-dashboard')),
             linkItem('Energy Payments', reverse('core:energy-payments-dashboard')),
+            linkItem('Events', reverse('core:events')),
             linkItem('Goal & Task', reverse('core:goals-and-tasks')),
         ]),
     ]

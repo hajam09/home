@@ -5,7 +5,6 @@ from io import StringIO, TextIOWrapper
 from django.apps import apps
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import BooleanField, Case, Count, DateTimeField, F, Q, Value, When
 from django.http import HttpResponseRedirect
 from django.shortcuts import render, redirect
@@ -14,7 +13,7 @@ from django.views import View
 from django.views.generic import ListView
 
 from core import service
-from core.models import EnergyPayment, MeterPoint, Goal, Task, MeterReading
+from core.models import EnergyPayment, MeterPoint, Goal, Task, MeterReading, Event
 
 
 def indexView(request):
@@ -223,3 +222,17 @@ def goalAndTasks(request):
         'goal': goal,
     }
     return render(request, 'core/goals-and-tasks.html', context)
+
+
+def events(request):
+    Event.objects.filter(endDateTime__lt=now(), completed=False).update(completed=True)
+    if request.method == 'POST':
+        Event.objects.create(
+            title=request.POST.get('title'),
+            description=request.POST.get('description'),
+            location=request.POST.get('location'),
+            startDateTime=request.POST.get('start'),
+            endDateTime=request.POST.get('end'),
+        )
+        return redirect(request.path)
+    return render(request, 'core/events.html')

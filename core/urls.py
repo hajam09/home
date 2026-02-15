@@ -13,6 +13,7 @@ from core.api import (
     EnergyPaymentListAPI,
     MeterReadingListAPI,
     CatListAPI,
+    EventListAPI,
     EventReminderListAPI,
     GoalListAPI,
     TaskListAPI,
@@ -20,6 +21,7 @@ from core.api import (
 from core.views import (
     indexView,
     goalAndTasks,
+    events,
     EnergyPaymentsDashboard,
     MeterPointView,
 )
@@ -53,6 +55,11 @@ urlpatterns = [
         goalAndTasks,
         name='goals-and-tasks'
     ),
+    path(
+        'events/',
+        events,
+        name='events'
+    ),
 
     # Versioned custom APIs
     path(
@@ -79,6 +86,7 @@ urlpatterns = [
     path('api/energy-payments/', EnergyPaymentListAPI.as_view(), name='energy-payments-list'),
     path('api/meter-readings/', MeterReadingListAPI.as_view(), name='meter-readings-list'),
     path('api/cats/', CatListAPI.as_view(), name='cats-list'),
+    path('api/events/', EventListAPI.as_view(), name='events-list'),
     path('api/event-reminders/', EventReminderListAPI.as_view(), name='event-reminders-list'),
     path('api/goals/', GoalListAPI.as_view(), name='goals-list'),
     path('api/tasks/', TaskListAPI.as_view(), name='tasks-list'),

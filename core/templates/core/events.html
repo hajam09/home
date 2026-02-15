@@ -1,0 +1,198 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block content %}
+    <div class='container mt-5'>
+
+        <form class='mt-5' method='post'>
+            {% csrf_token %}
+            <div class='form-row'>
+                <div class='form-group col-md-6'>
+                    <input type='text' class='form-control' name='title' placeholder='Title' required>
+                </div>
+                <div class='form-group col-md-6'>
+                    <input type='text' class='form-control' name='location' placeholder='Location'>
+                </div>
+            </div>
+            <div class='form-row'>
+                <div class='form-group col-md-6'>
+                    <input type='datetime-local' class='form-control' name='start' required>
+                </div>
+                <div class='form-group col-md-6'>
+                    <input type='datetime-local' class='form-control' name='end' required>
+                </div>
+            </div>
+            <div class='form-row'>
+                <div class='form-group col-12'>
+                    <textarea class='form-control' rows='5' name='description' placeholder='Description'></textarea>
+                </div>
+            </div>
+            <div class='form-row'>
+                <div class='col text-right'>
+                    <button type='submit' class='btn btn-primary'>Save</button>
+                </div>
+            </div>
+        </form>
+
+        <table class='table mt-5'>
+            <thead class='thead-dark'>
+            <tr>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Location</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Time Left</th>
+            </tr>
+            </thead>
+            <tbody id='list-of-events'></tbody>
+        </table>
+    </div>
+
+    <script>
+        async function getEvents() {
+            const url = `/api/events/`;
+            const response = await fetch(url);
+            return response.json();
+        }
+
+        function clearListOfEvents() {
+            const eventList = document.getElementById('list-of-events');
+            while (eventList.firstChild) {
+                eventList.removeChild(eventList.firstChild);
+            }
+        }
+
+        async function handleEventStatusChange(eventId, completed) {
+            await fetch('/api/events/', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
+                },
+                body: JSON.stringify({event: eventId, completed: completed}),
+            });
+            clearListOfEvents();
+            fetchAndDisplayEvents();
+        }
+
+        let countdownInterval;
+
+        function renderEvents(events) {
+            const eventList = document.getElementById('list-of-events');
+            if (countdownInterval) clearInterval(countdownInterval);
+            const countdownCells = [];
+
+            events.forEach(event => {
+                const tr = document.createElement('tr');
+
+                const tdTitle = document.createElement('td');
+                const wrapper = document.createElement('div');
+                wrapper.className = 'form-check d-flex align-items-center';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'form-check-input';
+                checkbox.style.width = '25px';
+                checkbox.style.height = '25px';
+                checkbox.style.cursor = 'pointer';
+                checkbox.checked = event.completed;
+
+                checkbox.addEventListener('change', () => {
+                    handleEventStatusChange(event.id, checkbox.checked);
+                });
+
+                const span = document.createElement('span');
+                span.className = 'ml-3';
+                span.style.cursor = 'pointer';
+                span.style.fontSize = '1rem';
+                span.textContent = event.title || '';
+
+                wrapper.appendChild(checkbox);
+                wrapper.appendChild(span);
+                tdTitle.appendChild(wrapper);
+                tr.appendChild(tdTitle);
+
+                const tdDescription = document.createElement('td');
+                tdDescription.textContent = event.description || '';
+                tr.appendChild(tdDescription);
+
+                const tdLocation = document.createElement('td');
+                tdLocation.textContent = event.location || '';
+                tr.appendChild(tdLocation);
+
+                const tdStart = document.createElement('td');
+                tdStart.textContent = event.startDateTime
+                    ? new Date(event.startDateTime).toLocaleString('en-GB')
+                    : '';
+                tr.appendChild(tdStart);
+
+                const tdEnd = document.createElement('td');
+                tdEnd.textContent = event.endDateTime
+                    ? new Date(event.endDateTime).toLocaleString('en-GB')
+                    : '';
+                tr.appendChild(tdEnd);
+
+                const tdCountdown = document.createElement('td');
+                tr.appendChild(tdCountdown);
+
+                if (event.startDateTime && event.endDateTime) {
+                    countdownCells.push({
+                        td: tdCountdown,
+                        start: new Date(event.startDateTime),
+                        end: new Date(event.endDateTime)
+                    });
+                } else {
+                    tdCountdown.textContent = '';
+                }
+
+                eventList.appendChild(tr);
+            });
+
+            function updateCountdowns() {
+                const now = new Date();
+                countdownCells.forEach(c => {
+                    const {td, start, end} = c;
+
+                    if (now < start) {
+                        td.textContent = formatDuration(start - now) + ' until start';
+                    } else if (now >= start && now <= end) {
+                        td.textContent = formatDuration(end - now) + ' left';
+                    } else {
+                        td.textContent = 'Ended';
+                    }
+                });
+            }
+
+            updateCountdowns();
+            countdownInterval = setInterval(updateCountdowns, 1000);
+        }
+
+        function formatDuration(ms) {
+            if (ms <= 0) return '0s';
+            const totalSeconds = Math.floor(ms / 1000);
+            const days = Math.floor(totalSeconds / (3600 * 24));
+            const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+
+            const parts = [];
+            if (days > 0) parts.push(days + 'd');
+            if (hours > 0) parts.push(hours + 'h');
+            if (minutes > 0) parts.push(minutes + 'm');
+            if (seconds > 0) parts.push(seconds + 's');
+
+            return parts.join(' ');
+        }
+
+        function fetchAndDisplayEvents() {
+            getEvents().then(events => {
+                renderEvents(events);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            fetchAndDisplayEvents();
+        });
+    </script>
+
+{% endblock %}

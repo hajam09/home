@@ -11,6 +11,7 @@ from core.models import (
     EnergyPayment,
     MeterReading,
     Cat,
+    Event,
     EventReminder,
     Goal,
     Task,
@@ -174,6 +175,24 @@ class Command(BaseCommand):
         for item in tagMap:
             item[0].tags.add(*Tag.objects.filter(name__in=item[1]))
         self.log(f'Fetched {len(cBulk)} Cat objects.')
+
+        self.log('Fetching Event objects...')
+        events = Event.objects.bulk_create(
+            [
+                Event(
+                    title=item.get('title'),
+                    description=item.get('description'),
+                    location=item.get('location'),
+                    startDateTime=item.get('startDateTime'),
+                    endDateTime=item.get('endDateTime'),
+                    completed=item.get('completed'),
+                    createdDateTime=item.get('createdDateTime'),
+                    modifiedDateTime=item.get('modifiedDateTime'),
+                )
+                for item in self.request('events/')
+            ]
+        )
+        self.log(f'Fetched {len(events)} Event objects.')
 
         self.log('Fetching EventReminder objects...')
         eventReminders = EventReminder.objects.bulk_create(

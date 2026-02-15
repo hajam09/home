@@ -33,6 +33,7 @@ from core.models import (
     EnergyPayment,
     MeterReading,
     Cat,
+    Event,
     EventReminder,
     Goal,
     Task,
@@ -460,6 +461,28 @@ class CatListAPI(ListAPIView):
     queryset = Cat.objects.all().prefetch_related('tags').order_by('createdDateTime')
     serializer_class = CatSerializer
     permission_classes = [IsAuthenticated]
+
+
+class EventListAPI(ListAPIView):
+    class EventSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = Event
+            fields = '__all__'
+
+    queryset = Event.objects.all().order_by('completed', 'startDateTime')
+    serializer_class = EventSerializer
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, *args, **kwargs):
+        event = self.request.data.get('event')
+        completed = self.request.data.get('completed')
+
+        data = {}
+        if completed is not None:
+            data['completed'] = completed
+
+        Event.objects.filter(id=event).update(**data)
+        return Response(status=status.HTTP_200_OK)
 
 
 class EventReminderListAPI(ListAPIView):
