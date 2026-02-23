@@ -1,0 +1,59 @@
+body {
+    font-family: "Roboto", sans-serif;
+    color: black;
+}
+
+/* Sidebar style */
+#sidebar {
+    min-height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px;
+    background-color: #343a40;
+    padding-top: 20px;
+    transition: transform 0.3s ease;
+    z-index: 1000;
+}
+
+#sidebar.hide {
+    transform: translateX(-100%);
+}
+
+#sidebar .nav-item {
+    width: 100%;
+}
+
+#sidebar .nav-link {
+    color: #ddd;
+}
+
+#sidebar .nav-link:hover {
+    color: white;
+    background-color: #007bff;
+}
+
+/* Main content adjustment when sidebar is visible */
+.content {
+    margin-left: 250px;
+    transition: margin-left 0.3s ease;
+}
+
+.content.sidebar-hidden {
+    margin-left: 0;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    #sidebar {
+        width: 200px;
+    }
+
+    .content {
+        margin-left: 0;
+    }
+
+    .content.sidebar-hidden {
+        margin-left: 0;
+    }
+}

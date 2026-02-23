@@ -13,65 +13,71 @@
         </form>
 
         {% if goals %}
-            <table class='table mt-5'>
-                <thead class='thead-dark'>
-                <tr>
-                    <th scope='col'>Goal</th>
-                    <th scope='col'>Date & Time</th>
-                    <th scope='col'>Completed Tasks</th>
-                    <th scope='col'>Total Tasks</th>
-                    <th scope='col'>Action</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for g in goals %}
+            <div class='table-responsive'>
+                <table class='table mt-5'>
+                    <thead class='thead-dark'>
                     <tr>
-                        <td>
-                            <span class='badge {% if g.isCompleted %}badge-success{% else %}badge-primary{% endif %}'>{{ g.name }}</span>
-                        </td>
-                        <td>{{ g.createdDateTime }}</td>
-                        <td>{{ g.completedTasks }}</td>
-                        <td>{{ g.totalTasks }}</td>
-                        <td>
-                            <a href='/goals-and-tasks/?goal={{ g.id }}'
-                               class='btn btn-outline-primary btn-sm' role='button'>View</a>
-                        </td>
+                        <th scope='col' class='text-nowrap'>Goal</th>
+                        <th scope='col' class='text-nowrap'>Date & Time</th>
+                        <th scope='col' class='text-nowrap'>Completed Tasks</th>
+                        <th scope='col' class='text-nowrap'>Total Tasks</th>
+                        <th scope='col' class='text-nowrap'>Action</th>
                     </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                    {% for g in goals %}
+                        <tr>
+                            <td class='text-nowrap'>
+                                <span class='badge {% if g.isCompleted %}badge-success{% else %}badge-primary{% endif %}'>{{ g.name }}</span>
+                            </td>
+                            <td class='text-nowrap'>{{ g.createdDateTime }}</td>
+                            <td class='text-nowrap'>{{ g.completedTasks }}</td>
+                            <td class='text-nowrap'>{{ g.totalTasks }}</td>
+                            <td class='text-nowrap'>
+                                <a href='/goals-and-tasks/?goal={{ g.id }}'
+                                   class='btn btn-outline-primary btn-sm' role='button'>View</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         {% endif %}
 
         {% if request.GET.goal and goal %}
-            <table class='table mt-5'>
-                <thead class='thead-dark'>
-                <tr>
-                    <th scope='col'>Goal</th>
-                    <th scope='col'>Date & Time</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                    <td> {{ goal.name }} </td>
-                    <td>{{ goal.createdDateTime }}</td>
-                </tr>
-                </tbody>
-            </table>
+            <div class='table-responsive'>
+                <table class='table mt-5'>
+                    <thead class='thead-dark'>
+                    <tr>
+                        <th scope='col' class='text-nowrap'>Goal</th>
+                        <th scope='col' class='text-nowrap'>Date & Time</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td class='text-nowrap'> {{ goal.name }} </td>
+                        <td class='text-nowrap'>{{ goal.createdDateTime }}</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
 
-            <table class='table mt-5'>
-                <thead class='thead-dark'>
-                <tr>
-                    <th scope='col'>
-                        <div class='row'>
-                            <div class='col-md-auto'>Task</div>
-                            <div class='col' id='pb-container'></div>
-                        </div>
-                    </th>
-                </tr>
-                </thead>
-                <tbody id='list-of-tasks'>
-                </tbody>
-            </table>
+            <div class='table-responsive'>
+                <table class='table mt-5'>
+                    <thead class='thead-dark'>
+                    <tr>
+                        <th scope='col' class='text-nowrap'>
+                            <div class='row'>
+                                <div class='col-md-auto'>Task</div>
+                                <div class='col' id='pb-container'></div>
+                            </div>
+                        </th>
+                    </tr>
+                    </thead>
+                    <tbody id='list-of-tasks'>
+                    </tbody>
+                </table>
+            </div>
         {% endif %}
     </div>
 

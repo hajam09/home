@@ -13,6 +13,7 @@ from django.views import View
 from django.views.generic import ListView
 
 from core import service
+from core.forms import EventForm
 from core.models import EnergyPayment, MeterPoint, Goal, Task, MeterReading, Event
 
 
@@ -226,13 +227,14 @@ def goalAndTasks(request):
 
 def events(request):
     Event.objects.filter(endDateTime__lt=now(), completed=False).update(completed=True)
+
+    event = Event.objects.filter(id=request.GET.get('edit')).first()
     if request.method == 'POST':
-        Event.objects.create(
-            title=request.POST.get('title'),
-            description=request.POST.get('description'),
-            location=request.POST.get('location'),
-            startDateTime=request.POST.get('start'),
-            endDateTime=request.POST.get('end'),
-        )
-        return redirect(request.path)
-    return render(request, 'core/events.html')
+        form = EventForm(request.POST, instance=event) if event else EventForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect(request.path)
+    else:
+        form = EventForm(instance=event) if event else EventForm()
+
+    return render(request, 'core/events.html', {'form': form})

@@ -2,30 +2,29 @@
 {% load static %}
 {% block content %}
     <div class='container mt-5'>
-
         <form class='mt-5' method='post'>
             {% csrf_token %}
+
             <div class='form-row'>
-                <div class='form-group col-md-6'>
-                    <input type='text' class='form-control' name='title' placeholder='Title' required>
-                </div>
-                <div class='form-group col-md-6'>
-                    <input type='text' class='form-control' name='location' placeholder='Location'>
-                </div>
+                <div class='form-group col-md-6'>{{ form.title }}</div>
+                <div class='form-group col-md-6'>{{ form.location }}</div>
             </div>
+
             <div class='form-row'>
-                <div class='form-group col-md-6'>
-                    <input type='datetime-local' class='form-control' name='start' required>
-                </div>
-                <div class='form-group col-md-6'>
-                    <input type='datetime-local' class='form-control' name='end' required>
-                </div>
+                <div class='form-group col-md-6'>{{ form.startDateTime }}</div>
+                <div class='form-group col-md-6'>{{ form.endDateTime }}</div>
             </div>
+
             <div class='form-row'>
-                <div class='form-group col-12'>
-                    <textarea class='form-control' rows='5' name='description' placeholder='Description'></textarea>
-                </div>
+                <div class='form-group col-12'>{{ form.description }}</div>
             </div>
+
+            {% if form.non_field_errors %}
+                {% for error in form.non_field_errors %}
+                    <div class='alert alert-danger'>{{ error }}</div>
+                {% endfor %}
+            {% endif %}
+
             <div class='form-row'>
                 <div class='col text-right'>
                     <button type='submit' class='btn btn-primary'>Save</button>
@@ -33,19 +32,22 @@
             </div>
         </form>
 
-        <table class='table mt-5'>
-            <thead class='thead-dark'>
-            <tr>
-                <th>Title</th>
-                <th>Description</th>
-                <th>Location</th>
-                <th>Start</th>
-                <th>End</th>
-                <th>Time Left</th>
-            </tr>
-            </thead>
-            <tbody id='list-of-events'></tbody>
-        </table>
+        <div class='table-responsive'>
+            <table class='table mt-5'>
+                <thead class='thead-dark'>
+                <tr>
+                    <th scope='col' class='text-nowrap'>Title</th>
+                    <th scope='col' class='text-nowrap'>Description</th>
+                    <th scope='col' class='text-nowrap'>Location</th>
+                    <th scope='col' class='text-nowrap'>Start</th>
+                    <th scope='col' class='text-nowrap'>End</th>
+                    <th scope='col' class='text-nowrap'>Time Left</th>
+                    <th scope='col' class='text-nowrap'>Action</th>
+                </tr>
+                </thead>
+                <tbody id='list-of-events'></tbody>
+            </table>
+        </div>
     </div>
 
     <script>
@@ -122,13 +124,13 @@
 
                 const tdStart = document.createElement('td');
                 tdStart.textContent = event.startDateTime
-                    ? new Date(event.startDateTime).toLocaleString('en-GB')
+                    ? new Date(event.startDateTime).toLocaleString('en-GB', {timeZone: 'UTC'})
                     : '';
                 tr.appendChild(tdStart);
 
                 const tdEnd = document.createElement('td');
                 tdEnd.textContent = event.endDateTime
-                    ? new Date(event.endDateTime).toLocaleString('en-GB')
+                    ? new Date(event.endDateTime).toLocaleString('en-GB', {timeZone: 'UTC'})
                     : '';
                 tr.appendChild(tdEnd);
 
@@ -144,6 +146,15 @@
                 } else {
                     tdCountdown.textContent = '';
                 }
+
+                const tdAction = document.createElement('td');
+                const editLink = document.createElement('a');
+                editLink.classList.add('btn', 'btn-primary');
+                editLink.setAttribute('href', `${window.location.href.split('?')[0]}?edit=${event.id}`);
+                editLink.setAttribute('role', 'button');
+                editLink.textContent = 'Edit';
+                tdAction.appendChild(editLink);
+                tr.appendChild(tdAction);
 
                 eventList.appendChild(tr);
             });

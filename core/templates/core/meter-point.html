@@ -3,33 +3,35 @@
 {% block content %}
     <div class='container mt-5'>
 
-        <table class='table'>
-            <thead class='thead-dark'>
-            <tr>
-                <th scope='col'>Smart Card Number</th>
-                <th scope='col'>Identifier</th>
-                <th scope='col'>Utility Market</th>
-                <th scope='col'>Tariff</th>
-                <th scope='col'>Action</th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr>
-                <th scope='row'>{{ meterPoint.smartCardNumber }}</th>
-                <td>{{ meterPoint.identifier }}</td>
-                <td>{{ meterPoint.utilityMarket }}</td>
-                <td>{{ meterPoint.tariff }}</td>
-                <td>
-                    <button type='button' class='btn btn-outline-primary'
-                            onclick='downloadSampleCSV()'> Download Sample File
-                    </button>
-                    <button type='button' class='btn btn-outline-primary'
-                            onclick='exportData()'> Export
-                    </button>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+        <div class='table-responsive'>
+            <table class='table'>
+                <thead class='thead-dark'>
+                <tr>
+                    <th scope='col'>Smart Card Number</th>
+                    <th scope='col'>Identifier</th>
+                    <th scope='col'>Utility Market</th>
+                    <th scope='col'>Tariff</th>
+                    <th scope='col'>Action</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <th scope='row'>{{ meterPoint.smartCardNumber }}</th>
+                    <td>{{ meterPoint.identifier }}</td>
+                    <td>{{ meterPoint.utilityMarket }}</td>
+                    <td>{{ meterPoint.tariff }}</td>
+                    <td>
+                        <button type='button' class='btn btn-outline-primary'
+                                onclick='downloadSampleCSV()'> Download Sample File
+                        </button>
+                        <button type='button' class='btn btn-outline-primary'
+                                onclick='exportData()'> Export
+                        </button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
 
         <ul class='nav nav-tabs' id='uploadTabs' role='tablist'>
             <li class='nav-item'>
@@ -187,42 +189,44 @@
             </table>
         {% endif %}
 
-        <table class='table mt-5'>
-            <thead class='thead-light'>
-            <tr>
+        <div class='table-responsive'>
+            <table class='table mt-5'>
+                <thead class='thead-light'>
+                <tr>
+                    {% if request.GET.tab == 'readings' %}
+                        <th scope='col' class='text-nowrap'>Date</th>
+                        <th scope='col' class="text-nowrap">Reading</th>
+                    {% else %}
+                        <th scope='col' class="text-nowrap">Date</th>
+                        <th scope='col' class="text-nowrap">Time</th>
+                        <th scope='col' class="text-nowrap">Channel</th>
+                        <th scope='col' class="text-nowrap">Top Up Code</th>
+                        <th scope='col' class="text-nowrap">Amount</th>
+                    {% endif %}
+                </tr>
+                </thead>
+                <tbody>
                 {% if request.GET.tab == 'readings' %}
-                    <th scope='col'>Date</th>
-                    <th scope='col'>Reading</th>
+                    {% for i in table %}
+                        <tr>
+                            <td class='text-nowrap'>{{ i.date }}</td>
+                            <td class="text-nowrap">{{ i.reading }}</td>
+                        </tr>
+                    {% endfor %}
                 {% else %}
-                    <th scope='col'>Date</th>
-                    <th scope='col'>Time</th>
-                    <th scope='col'>Channel</th>
-                    <th scope='col'>Top Up Code</th>
-                    <th scope='col'>Amount</th>
+                    {% for i in table %}
+                        <tr>
+                            <td class="text-nowrap">{{ i.date }}</td>
+                            <td class="text-nowrap">{{ i.time|date:'H:i' }}</td>
+                            <td class="text-nowrap">{{ i.get_channel_display }}</td>
+                            <td class="text-nowrap">{{ i.topUpCode }}</td>
+                            <td class="text-nowrap">£{{ i.amount }}</td>
+                        </tr>
+                    {% endfor %}
                 {% endif %}
-            </tr>
-            </thead>
-            <tbody>
-            {% if request.GET.tab == 'readings' %}
-                {% for i in table %}
-                    <tr>
-                        <td>{{ i.date }}</td>
-                        <td>{{ i.reading }}</td>
-                    </tr>
-                {% endfor %}
-            {% else %}
-                {% for i in table %}
-                    <tr>
-                        <td>{{ i.date }}</td>
-                        <td>{{ i.time|date:'H:i' }}</td>
-                        <td>{{ i.get_channel_display }}</td>
-                        <td>{{ i.topUpCode }}</td>
-                        <td>£{{ i.amount }}</td>
-                    </tr>
-                {% endfor %}
-            {% endif %}
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     </div>
     <script src='https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js'></script>
     <script>

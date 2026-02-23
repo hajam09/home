@@ -18,47 +18,26 @@
             integrity="sha512-STof4xm1wgkfm7heWqFJVn58Hm3EtS31XFaagaa8VMReCXAkQnJZ+jEy8PCC/iT18dFy95WcExNHFTqLyp72eQ=="
             crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     </head>
-    <style>
-        body {
-            font-family: "Roboto", sans-serif;
-            color: black;
-        }
-    </style>
-
+    <link rel='stylesheet' type='text/css' href="{% static 'css/base.css' %}">
     {% navigationPanel request as navigationPanel %}
-
     <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand" href="#">Home</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown"
-                aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div class="collapse navbar-collapse" id="navbarNavDropdown">
-            <ul class="navbar-nav ml-auto">
-                {% for link in navigationPanel %}
-                    {% if link.subLinks %}
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown{{ forloop.counter }}"
-                               role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                {% if link.icon %}{{ link.icon|safe }}{% endif %} {{ link.name }}
-                            </a>
-                            <div class="dropdown-menu dropdown-menu-right"
-                                 aria-labelledby="navbarDropdown{{ forloop.counter }}">
-                                {% for sub in link.subLinks %}
-                                    <a class="dropdown-item" href="{{ sub.url }}">
-                                        {% if sub.icon %}{{ sub.icon|safe }}{% endif %} {{ sub.name }}
-                                    </a>
-                                {% endfor %}
-                            </div>
-                        </li>
-                    {% endif %}
-                {% endfor %}
-            </ul>
-        </div>
+        <a class="navbar-brand" href="#" onclick="showHideSideBar();">Home</a>
     </nav>
-    <div class="container mt-1">
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="bg-dark text-white p-3">
+        <h4 onclick="showHideSideBar();">Home</h4>
+        <ul class="nav flex-column">
+            {% for link in navigationPanel %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ link.url }}">{{ link.name }}</a>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="content p-4">
         {% if messages %}
             {% for msg in messages %}
                 <div style="color: black; text-align: center;"
@@ -67,42 +46,11 @@
                 </div>
             {% endfor %}
         {% endif %}
+        {% block content %}
+        {% endblock %}
     </div>
-    <div class="container">
-        <br>
-        <div class="row">
-            <div class="col">
-                <a type="button" class="btn btn-outline-dark btn-block"
-                   href="{% url 'core:index-view' %}">Index
-                </a>
-            </div>
-            <div class="col">
-                <a type="button" class="btn btn-outline-dark btn-block"
-                   href="{% url 'core:cat-purchases-dashboard' %}">Cat Purchases Dashboard
-                </a>
-            </div>
-            <div class="col">
-                <a type="button" class="btn btn-outline-dark btn-block"
-                   href="{% url 'core:energy-payments-dashboard' %}">Energy Payment Dashboard
-                </a>
-            </div>
-            <div class="col">
-                <a type="button" class="btn btn-outline-dark btn-block"
-                   href="{% url 'core:events' %}">Events
-                </a>
-            </div>
-            <div class="col">
-                <a type="button" class="btn btn-outline-dark btn-block"
-                   href="{% url 'core:goals-and-tasks' %}">Goals & Tasks
-                </a>
-            </div>
-        </div>
-    </div>
-    {% block content %}
-    {% endblock %}
-    </body>
-    <script>
 
+    <script>
         function getCookie(name) {
             let cookieValue = null;
 
@@ -122,6 +70,33 @@
             return cookieValue;
         }
 
+        function showHideSideBar() {
+            let sidebar = document.getElementById('sidebar');
+            let content = document.querySelector('.content');
+
+            sidebar.classList.toggle('hide');
+            content.classList.toggle('sidebar-hidden');
+
+            if (sidebar.classList.contains('hide')) {
+                localStorage.setItem('sidebarState', 'closed');
+            } else {
+                localStorage.setItem('sidebarState', 'open');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const sidebarState = localStorage.getItem('sidebarState');
+            let sidebar = document.getElementById('sidebar');
+            let content = document.querySelector('.content');
+
+            if (sidebarState === 'open') {
+                sidebar.classList.remove('hide');
+                content.classList.remove('sidebar-hidden');
+            } else {
+                sidebar.classList.add('hide');
+                content.classList.add('sidebar-hidden');
+            }
+        });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js"
             integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
@@ -129,4 +104,5 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/js/bootstrap.min.js"
             integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
             crossorigin="anonymous"></script>
+    </body>
 </html>
