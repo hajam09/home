@@ -4,6 +4,7 @@ from io import StringIO, TextIOWrapper
 
 from django.apps import apps
 from django.contrib import messages
+from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.db.models import BooleanField, Case, Count, DateTimeField, F, Q, Value, When
 from django.http import HttpResponseRedirect
@@ -79,6 +80,13 @@ def indexView(request):
         'generatedAt': now(),
     }
     return render(request, 'core/index.html', context)
+
+
+@login_required
+def logoutView(request):
+    logout(request)
+    previousUrl = request.META.get('HTTP_REFERER')
+    return redirect(previousUrl or 'core:index-view')
 
 
 class EnergyPaymentsDashboard(ListView):

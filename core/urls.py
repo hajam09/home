@@ -20,6 +20,7 @@ from core.api import (
 )
 from core.views import (
     indexView,
+    logoutView,
     goalAndTasks,
     events,
     EnergyPaymentsDashboard,
@@ -34,6 +35,11 @@ urlpatterns = [
         '',
         indexView,
         name='index-view'
+    ),
+    path(
+        'logout/',
+        logoutView,
+        name='logout-view'
     ),
     path(
         'cat-purchases-dashboard/',
