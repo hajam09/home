@@ -131,6 +131,7 @@ class MeterPoint(models.Model):
         SAFEGUARD_PAYG = 'SAFEGUARD_PAYG', _('Safeguard PAYG')
         OTHER = 'OTHER', _('Other')
 
+    account = models.CharField(max_length=64, null=True)
     smartCardNumber = models.CharField(max_length=64)
     identifier = models.CharField(max_length=64, unique=True)
     utilityMarket = models.CharField(max_length=64, choices=UtilityMarket.choices)
