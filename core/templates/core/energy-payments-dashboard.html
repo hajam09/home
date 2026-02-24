@@ -8,7 +8,6 @@
                 <table class='table table-sm mt-5'>
                     <thead class='thead-dark'>
                     <tr>
-                        <th scope='col' class='text-nowrap'>Account</th>
                         <th scope='col' class='text-nowrap'>Smart Card Number</th>
                         <th scope='col' class='text-nowrap'>Identifier</th>
                         <th scope='col' class='text-nowrap'>Utility Market</th>
@@ -20,8 +19,7 @@
 
                     {% for mp in meterPoints %}
                         <tr>
-                            <th scope='row'>{{ mp.account }}</th>
-                            <td class='text-nowrap'>{{ mp.smartCardNumber }}</td>
+                            <th scope='row'>{{ mp.smartCardNumber }}</th>
                             <td class='text-nowrap'>{{ mp.identifier }}</td>
                             <td class='text-nowrap'>{{ mp.utilityMarket }}</td>
                             <td class='text-nowrap'>{{ mp.tariff }}</td>
