@@ -124,11 +124,14 @@ class MeterPoint(models.Model):
     class UtilityMarket(models.TextChoices):
         ELECTRICITY = 'ELECTRICITY', _('Electricity')
         GAS = 'GAS', _('Gas')
+        WATER = 'WATER', _('Water')
 
     class Tariff(models.TextChoices):
         STANDARD = 'STANDARD', _('Standard')
         SAFEGUARD_PAYG = 'SAFEGUARD_PAYG', _('Safeguard PAYG')
+        OTHER = 'OTHER', _('Other')
 
+    account = models.CharField(max_length=64, null=True)
     smartCardNumber = models.CharField(max_length=64)
     identifier = models.CharField(max_length=64, unique=True)
     utilityMarket = models.CharField(max_length=64, choices=UtilityMarket.choices)
@@ -145,6 +148,8 @@ class MeterPoint(models.Model):
 class EnergyPayment(models.Model):
     class Channel(models.TextChoices):
         APP = 'APP', _('App')
+        BANK = 'BANK', _('Bank')
+        CHEQUE = 'CHEQUE', _('Cheque')
         ONLINE = 'ONLINE', _('Online')
         OTHER = 'OTHER', _('Other')
         PEAK_SAVE = 'PEAK_SAVE', _('PeakSave')

@@ -7,20 +7,22 @@
             <table class='table'>
                 <thead class='thead-dark'>
                 <tr>
-                    <th scope='col'>Smart Card Number</th>
-                    <th scope='col'>Identifier</th>
-                    <th scope='col'>Utility Market</th>
-                    <th scope='col'>Tariff</th>
-                    <th scope='col'>Action</th>
+                    <th scope='col' class='text-nowrap'>Account</th>
+                    <th scope='col' class='text-nowrap'>Smart Card Number</th>
+                    <th scope='col' class='text-nowrap'>Identifier</th>
+                    <th scope='col' class='text-nowrap'>Utility Market</th>
+                    <th scope='col' class='text-nowrap'>Tariff</th>
+                    <th scope='col' class='text-nowrap'>Action</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr>
-                    <th scope='row'>{{ meterPoint.smartCardNumber }}</th>
-                    <td>{{ meterPoint.identifier }}</td>
-                    <td>{{ meterPoint.utilityMarket }}</td>
-                    <td>{{ meterPoint.tariff }}</td>
-                    <td>
+                    <th scope='row'>{{ meterPoint.account }}</th>
+                    <td class='text-nowrap'>{{ meterPoint.smartCardNumber }}</td>
+                    <td class='text-nowrap'>{{ meterPoint.identifier }}</td>
+                    <td class='text-nowrap'>{{ meterPoint.utilityMarket }}</td>
+                    <td class='text-nowrap'>{{ meterPoint.tariff }}</td>
+                    <td class='text-nowrap'>
                         <button type='button' class='btn btn-outline-primary'
                                 onclick='downloadSampleCSV()'> Download Sample File
                         </button>

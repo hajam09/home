@@ -23,6 +23,7 @@ from core.views import (
     logoutView,
     goalAndTasks,
     events,
+    generator,
     EnergyPaymentsDashboard,
     MeterPointView,
 )
@@ -65,6 +66,11 @@ urlpatterns = [
         'events/',
         events,
         name='events'
+    ),
+    path(
+        'generator/',
+        generator,
+        name='generator'
     ),
 
     # Versioned custom APIs

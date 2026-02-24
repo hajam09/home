@@ -134,12 +134,13 @@ class MeterPointAdmin(admin.ModelAdmin):
         fields = ('date', 'time', 'channel', 'topUpCode', 'amount')
 
     list_display = [
+        'account',
         'smartCardNumber',
         'identifier',
         'utilityMarket',
         'tariff',
     ]
-    inlines = [EnergyPaymentInline]
+    #inlines = [EnergyPaymentInline]
 
 
 @admin.register(MeterReading)

@@ -1,6 +1,6 @@
 from django import forms
 
-from core.models import Event
+from core.models import Event, MeterPoint, EnergyPayment
 
 
 class EventForm(forms.ModelForm):
@@ -38,3 +38,37 @@ class EventForm(forms.ModelForm):
             raise forms.ValidationError('End date must be after start date.')
 
         return data
+
+
+class SmartCardForm(forms.Form):
+    doorNumber = forms.CharField(max_length=64, label='Door Number')
+    postcode = forms.CharField(max_length=10, label='Postcode')
+    utilityType = forms.ChoiceField(choices=MeterPoint.UtilityMarket.choices, label='Utility Type')
+    tariff = forms.ChoiceField(choices=MeterPoint.Tariff.choices, label='Tariff')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['doorNumber'].widget.attrs.update({'class': 'form-control form-control-sm'})
+        self.fields['postcode'].widget.attrs.update({'class': 'form-control form-control-sm'})
+        self.fields['utilityType'].widget.attrs.update({'class': 'form-control form-control-sm'})
+        self.fields['tariff'].widget.attrs.update({'class': 'form-control form-control-sm'})
+
+
+class TopUpForm(forms.Form):
+    doorNumber = forms.CharField(max_length=64, label='Door Number')
+    postcode = forms.CharField(max_length=10, label='Postcode')
+    paymentDate = forms.DateField(label='Payment Date',widget=forms.DateInput(attrs={'class': 'form-control form-control-sm', 'type': 'date'}))
+    paymentTime = forms.TimeField(label='Payment Time',widget=forms.TimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'time'}))
+    channel = forms.ChoiceField(choices=EnergyPayment.Channel.choices, label='Payment Channel')
+    amount = forms.DecimalField(max_digits=6, decimal_places=2, label='Amount')
+    utilityType = forms.ChoiceField(choices=MeterPoint.UtilityMarket.choices, label='Utility Type')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['doorNumber'].widget.attrs.update({'class': 'form-control form-control-sm'})
+        self.fields['postcode'].widget.attrs.update({'class': 'form-control form-control-sm'})
+        self.fields['paymentDate'].widget.attrs.update({'class': 'form-control form-control-sm'})
+        self.fields['paymentTime'].widget.attrs.update({'class': 'form-control form-control-sm'})
+        self.fields['channel'].widget.attrs.update({'class': 'form-control form-control-sm'})
+        self.fields['amount'].widget.attrs.update({'class': 'form-control form-control-sm'})
+        self.fields['utilityType'].widget.attrs.update({'class': 'form-control form-control-sm'})

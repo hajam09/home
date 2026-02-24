@@ -14,7 +14,7 @@ from django.views import View
 from django.views.generic import ListView
 
 from core import service
-from core.forms import EventForm
+from core.forms import EventForm, SmartCardForm, TopUpForm
 from core.models import EnergyPayment, MeterPoint, Goal, Task, MeterReading, Event
 
 
@@ -246,3 +246,43 @@ def events(request):
         form = EventForm(instance=event) if event else EventForm()
 
     return render(request, 'core/events.html', {'form': form})
+
+
+def generator(request):
+    smartCardResults = None
+    topUpResults = None
+
+    smartCardForm = SmartCardForm(request.GET)
+    topUpForm = TopUpForm(request.GET)
+
+    if smartCardForm.is_valid():
+        doorNumber = smartCardForm.cleaned_data['doorNumber']
+        postcode = smartCardForm.cleaned_data['postcode']
+        utilityType = smartCardForm.cleaned_data['utilityType']
+        tariff = smartCardForm.cleaned_data['tariff']
+
+        smartCardNumber, identifier = service.generateSmartCardAndIdentifier(
+            doorNumber, postcode, utilityType, tariff
+        )
+        smartCardResults = {'smartCardNumber': smartCardNumber, 'identifier': identifier}
+
+    if topUpForm.is_valid():
+        doorNumber = topUpForm.cleaned_data['doorNumber']
+        postcode = topUpForm.cleaned_data['postcode']
+        paymentDate = topUpForm.cleaned_data['paymentDate']
+        paymentTime = topUpForm.cleaned_data['paymentTime']
+        channel = topUpForm.cleaned_data['channel']
+        amount = topUpForm.cleaned_data['amount']
+        utilityType = topUpForm.cleaned_data['utilityType']
+
+        topUpCode = service.generateTopUpCode(
+            doorNumber, postcode, paymentDate, paymentTime, channel, amount, utilityType
+        )
+        topUpResults = {'topUpCode': topUpCode}
+
+    return render(request, 'core/generator.html', {
+        'smartCardForm': smartCardForm,
+        'topUpForm': topUpForm,
+        'smartCardResults': smartCardResults,
+        'topUpResults': topUpResults
+    })

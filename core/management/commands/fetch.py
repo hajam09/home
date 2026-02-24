@@ -111,6 +111,7 @@ class Command(BaseCommand):
         meterPoints = MeterPoint.objects.bulk_create(
             [
                 MeterPoint(
+                    account=item.get('account'),
                     smartCardNumber=item.get('smartCardNumber'),
                     identifier=item.get('identifier'),
                     utilityMarket=item.get('utilityMarket'),

@@ -11,12 +11,13 @@ def linkItem(name, url=None, icon=None):
 @register.simple_tag
 def navigationPanel(request):
     links = [
-        linkItem('Admin', reverse('admin:index'), 'fas fa-cogs'),
+        linkItem('Admin', reverse('admin:index'), 'fas fa-user-shield'),
         linkItem('Index', reverse('core:index-view'), 'fas fa-th-large'),
         linkItem('Cat Purchases', reverse('core:cat-purchases-dashboard'), 'fas fa-shopping-cart'),
         linkItem('Energy Payments', reverse('core:energy-payments-dashboard'), 'fas fa-bolt'),
         linkItem('Events', reverse('core:events'), 'fas fa-calendar-alt'),
         linkItem('Goal & Task', reverse('core:goals-and-tasks'), 'fas fa-tasks'),
+        linkItem('Generator', reverse('core:generator'), 'fas fa-plug'),
         linkItem(None),
     ]
 
