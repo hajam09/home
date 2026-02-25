@@ -379,35 +379,35 @@ class EnergyPaymentAnalyticsApiVersion1(APIView):
 
 
 class MeterReadingAnalyticsApiVersion1(APIView):
+
     def base_queryset(self):
         return MeterReading.objects.select_related('meterPoint').order_by('date')
 
-    def electricity_filter(self):
-        return Q(meterPoint__utilityMarket=MeterPoint.UtilityMarket.ELECTRICITY)
-
-    def gas_filter(self):
-        return Q(meterPoint__utilityMarket=MeterPoint.UtilityMarket.GAS)
-
     def get(self, request):
+        utilities = re.sub(
+            r'\s+',
+            '',
+            request.GET.get('utility', 'electricity,gas,water')
+        ).lower().split(',')
+
+        utilities = set(filter(None, utilities))
+
         qs = self.base_queryset()
 
-        electricity_qs = qs.filter(self.electricity_filter())
-        gas_qs = qs.filter(self.gas_filter())
-
-        electricity_data = {
-            "dates": [r.date.strftime("%d/%m/%Y") for r in electricity_qs],
-            "readings": [float(r.reading) for r in electricity_qs],
-        }
-
-        gas_data = {
-            "dates": [r.date.strftime("%d/%m/%Y") for r in gas_qs],
-            "readings": [float(r.reading) for r in gas_qs],
+        utility_filters = {
+            'electricity': Q(meterPoint__utilityMarket=MeterPoint.UtilityMarket.ELECTRICITY),
+            'gas': Q(meterPoint__utilityMarket=MeterPoint.UtilityMarket.GAS),
         }
 
         data = {
-            "electricity": electricity_data,
-            "gas": gas_data
+            utility: {
+                'dates': [r.date.strftime('%d/%m/%Y') for r in qs.filter(utility_filters[utility])],
+                'readings': [float(r.reading) for r in qs.filter(utility_filters[utility])],
+            }
+            for utility in utilities
+            if utility in utility_filters
         }
+
         return Response(data, status=status.HTTP_200_OK)
 
 

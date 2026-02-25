@@ -55,8 +55,7 @@
         <canvas class='mt-3' id='v1-monthly-cost-all-utilities'></canvas>
         <canvas class='mt-3' id='v1-monthly-cost-separate-utilities'></canvas>
 
-        <canvas class='mt-3' id='v1-meter-readings-electricity'></canvas>
-        <canvas class='mt-3' id='v1-meter-readings-gas'></canvas>
+        <div id='v1-meter-readings-utility-graph'></div>
 
     </div>
     <script src='https://cdn.jsdelivr.net/npm/chart.js@3.0.0/dist/chart.js'></script>
@@ -78,7 +77,6 @@
             fetch('{% url 'core:v1-energy-payments-analytics-api' %}' + window.location.search)
                 .then(response => response.json())
                 .then(data => {
-                    console.log(data)
                     create_utilities_cards('v1-monthly-average', getKeysFromList(data, AVERAGE_MONTHLY_UTILITY_KEYS));
                     create_utilities_cards('v1-sum-payments', getKeysFromList(data, SUM_PAYMENTS_KEYS));
 
@@ -129,11 +127,41 @@
                     console.error('Error fetching data:', error);
                 });
 
-            fetch('{% url 'core:v1-meter-readings-analytics-api' %}')
+            fetch('{% url 'core:v1-meter-readings-analytics-api' %}' + window.location.search)
                 .then(response => response.json())
                 .then(data => {
-                    create_line_graph(data.electricity.dates, data.electricity.readings, 'v1-meter-readings-electricity', 'blue', 'Electricity Reading (kWh)');
-                    create_line_graph(data.gas.dates, data.gas.readings, 'v1-meter-readings-gas', 'green', 'Gas Reading (m³)');
+
+                    const utilityConfig = {
+                        electricity: {
+                            element: 'v1-meter-readings-electricity',
+                            colour: 'blue',
+                            label: 'Electricity Reading (kWh)'
+                        },
+                        gas: {
+                            element: 'v1-meter-readings-gas',
+                            colour: 'green',
+                            label: 'Gas Reading (m³)'
+                        },
+                    };
+
+                    Object.keys(utilityConfig).forEach(utility => {
+                        if (data[utility]) {
+                            const meterReadingGraphElement = document.getElementById('v1-meter-readings-utility-graph');
+                            const canvas = document.createElement('canvas');
+                            canvas.id = `v1-meter-readings-${utility}`;
+                            canvas.className = 'mt-3';
+                            meterReadingGraphElement.appendChild(canvas);
+
+                            const config = utilityConfig[utility];
+                            create_line_graph(
+                                data[utility].dates,
+                                data[utility].readings,
+                                config.element,
+                                config.colour,
+                                config.label
+                            );
+                        }
+                    });
                 })
                 .catch(error => {
                     console.error('Error fetching data:', error);
