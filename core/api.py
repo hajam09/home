@@ -1,3 +1,6 @@
+import re
+from decimal import Decimal
+
 from dateutil.relativedelta import relativedelta
 from django.db.models import (
     Avg,
@@ -15,8 +18,7 @@ from django.db.models import (
 )
 from django.db.models.functions import Round, ExtractYear
 from django.db.models.functions import (
-    TruncMonth,
-    TruncYear
+    TruncMonth
 )
 from rest_framework import status, serializers
 from rest_framework.generics import ListAPIView
@@ -211,122 +213,168 @@ class EnergyPaymentAnalyticsApiVersion1(APIView):
     def base_queryset(self):
         return EnergyPayment.objects.select_related('meterPoint')
 
-    def electricity_filter(self):
-        return Q(meterPoint__utilityMarket=MeterPoint.UtilityMarket.ELECTRICITY)
-
-    def gas_filter(self):
-        return Q(meterPoint__utilityMarket=MeterPoint.UtilityMarket.GAS)
-
-    def monthly_costs(self, qs):
-        return (
-            qs.annotate(month=TruncMonth('date'))
-            .values('month')
-            .annotate(
-                total=Sum('amount'),
-                payment_count=Count('id'),
-            )
-            .order_by('month')
-        )
-
-    def yearly_costs(self, qs):
-        return (
-            qs.annotate(year=TruncYear('date'))
-            .values('year')
-            .annotate(total_cost_per_year=Sum('amount'))
-            .order_by('year')
-        )
-
-    def average_from_monthlies(self, monthly_data):
-        if not monthly_data:
-            return 0
-        return sum(row['total'] for row in monthly_data) / len(monthly_data)
-
     def get(self, request):
+        # -----------------------------------
+        # 1️⃣ Selected utilities
+        # -----------------------------------
+        utilities = re.sub(
+            r'\s+',
+            '',
+            request.GET.get('utility', 'electricity,gas,water')
+        ).lower().split(',')
+        utilities = list(set(filter(None, utilities)))
+
         qs = self.base_queryset()
 
-        elec_qs = qs.filter(self.electricity_filter())
-        gas_qs = qs.filter(self.gas_filter())
+        # -----------------------------------
+        # 2️⃣ Build combined filter
+        # -----------------------------------
+        combined_filter = Q()
+        for utility in utilities:
+            combined_filter |= Q(meterPoint__utilityMarket=utility.upper())
+        qs = qs.filter(combined_filter)
 
-        # ---- Monthly ----
-        monthly_all = list(self.monthly_costs(qs))
-        monthly_electricity = list(self.monthly_costs(elec_qs))
-        monthly_gas = list(self.monthly_costs(gas_qs))
+        data = {}
 
-        # ---- Averages (monthly) ----
-        avg_cost_all = self.average_from_monthlies(monthly_all)
-        avg_cost_electricity = self.average_from_monthlies(monthly_electricity)
-        avg_cost_gas = self.average_from_monthlies(monthly_gas)
-
-        # ---- Totals ----
-        total_cost_all = qs.aggregate(total=Sum('amount'))['total'] or 0
-        total_cost_electricity = elec_qs.aggregate(total=Sum('amount'))['total'] or 0
-        total_cost_gas = gas_qs.aggregate(total=Sum('amount'))['total'] or 0
-
-        # ---- Yearly ----
-        total_annual_price = (
-            qs.annotate(year=ExtractYear('date'))
-            .values('year')
-            .annotate(
-                all_utilities=Sum('amount'),
-                electricity=Sum('amount', filter=self.electricity_filter()),
-                gas=Sum('amount', filter=self.gas_filter()),
+        # -----------------------------------
+        # 3️⃣ Totals + Counts (Single Aggregation)
+        # -----------------------------------
+        total_annotations = {'total_all': Sum('amount'), 'count_all': Count('id')}
+        for utility in utilities:
+            total_annotations[f'total_{utility}'] = Sum(
+                'amount', filter=Q(meterPoint__utilityMarket=utility.upper())
             )
-            .order_by('year')
-        )
-        total_annual_price = [
-            {'Year': i['year'], 'All Utilities': i['all_utilities'], 'Electricity': i['electricity'], 'Gas': i['gas']}
-            for i in total_annual_price
+            total_annotations[f'count_{utility}'] = Count(
+                'id', filter=Q(meterPoint__utilityMarket=utility.upper())
+            )
+
+        totals = qs.aggregate(**total_annotations)
+
+        # Totals section
+        data['total_utilities'] = {
+            'title': 'Total Utilities',
+            'value': f"£{round(totals.get('total_all') or 0, 2)}"
+        }
+        for utility in utilities:
+            data[f'total_{utility}'] = {
+                'title': f"Total {utility.capitalize()}",
+                'value': f"£{round(totals.get(f'total_{utility}') or 0, 2)}"
+            }
+
+        # Payment counts
+        data['payment_counts'] = {
+            'All': totals.get('count_all', 0),
+            **{
+                utility.capitalize(): totals.get(f'count_{utility}', 0)
+                for utility in utilities
+            }
+        }
+
+        # -----------------------------------
+        # 4️⃣ Determine full month range
+        # -----------------------------------
+        date_range = qs.aggregate(min_date=Min('date'), max_date=Max('date'))
+        min_date = date_range['min_date']
+        max_date = date_range['max_date']
+
+        full_months = []
+        if min_date and max_date:
+            current = min_date.replace(day=1)
+            end = max_date.replace(day=1)
+            while current <= end:
+                full_months.append(current)
+                current += relativedelta(months=1)
+
+        # -----------------------------------
+        # 5️⃣ Monthly aggregation (single query)
+        # -----------------------------------
+        monthly_annotations = {
+            'total_all': Sum('amount'),
+            'payment_count_all': Count('id')
+        }
+        for utility in utilities:
+            monthly_annotations[f'{utility}_total'] = Sum(
+                'amount', filter=Q(meterPoint__utilityMarket=utility.upper())
+            )
+            monthly_annotations[f'{utility}_count'] = Count(
+                'id', filter=Q(meterPoint__utilityMarket=utility.upper())
+            )
+
+        monthly_qs = qs.annotate(month=TruncMonth('date')).values('month').annotate(**monthly_annotations).order_by(
+            'month')
+        monthly_dict = {row['month']: row for row in monthly_qs}
+
+        # -----------------------------------
+        # 6️⃣ Normalize months (fill zeros)
+        # -----------------------------------
+        monthly = []
+        for month in full_months:
+            row = monthly_dict.get(month, {})
+            month_row = {
+                'month': month,
+                'total_all': row.get('total_all', 0),
+                'payment_count_all': row.get('payment_count_all', 0),
+                **{
+                    utility: row.get(f'{utility}_total', 0)
+                    for utility in utilities
+                },
+                **{
+                    f'{utility}_count': row.get(f'{utility}_count', 0)
+                    for utility in utilities
+                }
+            }
+            monthly.append(month_row)
+
+        # Add monthly data to response
+        data['cost_by_each_month_for_all_utilities'] = [
+            {'month': row['month'], 'total': row['total_all'], 'payment_count': row['payment_count_all']}
+            for row in monthly
         ]
 
-        # ---- Payment behaviour ----
-        payment_counts = {
-            'All': qs.count(),
-            'Electricity': elec_qs.count(),
-            'Gas': gas_qs.count(),
+        for utility in utilities:
+            data[f'cost_by_each_month_for_{utility}'] = [
+                {
+                    'month': row['month'],
+                    'total': row[utility],
+                    'payment_count': row[f'{utility}_count']
+                }
+                for row in monthly
+            ]
+
+        # -----------------------------------
+        # 7️⃣ Average monthly
+        # -----------------------------------
+        def average(key):
+            values = [row.get(key) if row.get(key) is not None else Decimal('0.0') for row in monthly]
+            return sum(values) / len(values) if values else Decimal('0.0')
+
+        data['avg_monthly_utilities'] = {
+            'title': 'Avg. Monthly Utilities',
+            'value': f"£{round(average('total_all'), 2)}"
         }
+        for utility in utilities:
+            data[f'avg_monthly_{utility}'] = {
+                'title': f"Avg. Monthly {utility.capitalize()}",
+                'value': f"£{round(average(utility), 2)}"
+            }
 
-        # ---- Final response ----
-        data = {
-            # Averages
-            'avg_monthly_utilities': {
-                'title': 'Avg. Monthly Utilities',
-                'value': f'£{round(avg_cost_all, 2)}'
-            },
-            'avg_monthly_electricity': {
-                'title': 'Avg. Monthly Electricity',
-                'value': f'£{round(avg_cost_electricity, 2)}'
-            },
-            'avg_monthly_gas': {
-                'title': 'Avg. Monthly Gas',
-                'value': f'£{round(avg_cost_gas, 2)}'
-            },
+        # -----------------------------------
+        # 8️⃣ Yearly totals
+        # -----------------------------------
+        yearly_annotations = {'all_utilities': Sum('amount')}
+        for utility in utilities:
+            yearly_annotations[utility] = Sum('amount', filter=Q(meterPoint__utilityMarket=utility.upper()))
 
-            # Totals
-            'total_utilities': {
-                'title': 'Total Utilities',
-                'value': f'£{round(total_cost_all, 2)}'
-            },
-            'total_electricity': {
-                'title': 'Total Electricity',
-                'value': f'£{round(total_cost_electricity, 2)}'
-            },
-            'total_gas': {
-                'title': 'Total Gas',
-                'value': f'£{round(total_cost_gas, 2)}'
-            },
+        yearly_qs = qs.annotate(year=ExtractYear('date')).values('year').annotate(**yearly_annotations).order_by('year')
 
-            # Counts & behaviour
-            'payment_counts': payment_counts,
-
-            # Yearly totals
-            'total_annual_price': total_annual_price,
-
-            # Monthly breakdowns (charts)
-            'cost_by_each_month_for_all_utilities': monthly_all,
-            'cost_by_each_month_for_electricity': monthly_electricity,
-            'cost_by_each_month_for_gas': monthly_gas,
-        }
-
+        data['total_annual_price'] = [
+            {
+                'Year': row['year'],
+                'All Utilities': row['all_utilities'],
+                **{utility.capitalize(): row.get(utility) or 0 for utility in utilities}
+            }
+            for row in yearly_qs
+        ]
         return Response(data, status=status.HTTP_200_OK)
 
 

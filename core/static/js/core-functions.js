@@ -37,7 +37,7 @@ function create_utilities_cards(containerId, dataList) {
     row.className = 'row mt-3';
 
     const itemCount = dataList.length;
-// Bootstrap grid has 12 columns, so divide 12 by number of items, min 1, max 12
+    // Bootstrap grid has 12 columns, so divide 12 by number of items, min 1, max 12
     const colSize = Math.min(12, Math.max(1, Math.floor(12 / itemCount)));
 
     dataList.forEach(item => {
