@@ -26,6 +26,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core import service
 from core.models import (
     Tag,
     CatPurchases,
@@ -39,6 +40,7 @@ from core.models import (
     EventReminder,
     Goal,
     Task,
+    Property
 )
 
 
@@ -411,6 +413,20 @@ class MeterReadingAnalyticsApiVersion1(APIView):
         return Response(data, status=status.HTTP_200_OK)
 
 
+class DatabaseBackupVersion1(APIView):
+    def post(self, request):
+        try:
+            success = service.sendDatabaseBackup()
+        except Exception as e:
+            print(f'Error sending backup: {e}')
+            success = False
+
+        return Response(
+            {'success': success},
+            status=status.HTTP_200_OK if success else status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
 class TagListAPI(ListAPIView):
     class TagSerializer(serializers.ModelSerializer):
         class Meta:
@@ -584,3 +600,14 @@ class TaskListAPI(ListAPIView):
 
         Task.objects.filter(id=task).update(**data)
         return Response(status=status.HTTP_200_OK)
+
+
+class PropertyListAPI(ListAPIView):
+    class PropertySerializer(serializers.ModelSerializer):
+        class Meta:
+            model = Property
+            fields = '__all__'
+
+    queryset = Property.objects.all()
+    serializer_class = PropertySerializer
+    permission_classes = [IsAuthenticated]

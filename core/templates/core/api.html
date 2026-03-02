@@ -1,0 +1,26 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block content %}
+    <div class='container mt-5'>
+        <button type='button' class='btn btn-primary btn-sm btn-block' id='db-backup-btn'>Back up Database</button>
+    </div>
+
+    <script>
+        document.getElementById('db-backup-btn').addEventListener('click', function () {
+            const btn = this;
+            fetch("{% url 'core:v1-database-backup-api' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+            }).then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        btn.classList.remove('btn-primary');
+                        btn.classList.add('btn-success');
+                    }
+                })
+        });
+    </script>
+{% endblock %}

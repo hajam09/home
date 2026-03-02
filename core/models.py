@@ -272,3 +272,15 @@ class Task(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Property(models.Model):
+    key = models.CharField(max_length=100)
+    value = models.TextField()
+
+    def __str__(self):
+        return self.key
+
+    class Meta:
+        verbose_name = 'Property'
+        verbose_name_plural = 'Properties'

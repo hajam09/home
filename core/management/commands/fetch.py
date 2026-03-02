@@ -15,6 +15,7 @@ from core.models import (
     EventReminder,
     Goal,
     Task,
+    Property,
 )
 
 
@@ -249,3 +250,15 @@ class Command(BaseCommand):
             ]
         )
         self.log(f'Fetched {len(tasks)} Task objects.')
+
+        self.log('Fetching Property objects...')
+        properties = Property.objects.bulk_create(
+            [
+                Property(
+                    key=item.get('key'),
+                    value=item.get('value'),
+                )
+                for item in self.request('properties/')
+            ]
+        )
+        self.log(f'Fetched {len(properties)} Property objects.')

@@ -18,6 +18,7 @@ def navigationPanel(request):
         linkItem('Events', reverse('core:events'), 'fas fa-calendar-alt'),
         linkItem('Goal & Task', reverse('core:goals-and-tasks'), 'fas fa-tasks'),
         linkItem('Generator', reverse('core:generator'), 'fas fa-plug'),
+        linkItem('API', reverse('core:api-view'), 'fas fa-network-wired'),
         linkItem(None),
     ]
 

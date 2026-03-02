@@ -20,7 +20,8 @@ from core.models import (
     MeterPoint,
     MeterReading,
     Goal,
-    Task
+    Task,
+    Property,
 )
 
 
@@ -140,7 +141,7 @@ class MeterPointAdmin(admin.ModelAdmin):
         'utilityMarket',
         'tariff',
     ]
-    #inlines = [EnergyPaymentInline]
+    # inlines = [EnergyPaymentInline]
 
 
 @admin.register(MeterReading)
@@ -283,3 +284,14 @@ class TagAdmin(admin.ModelAdmin):
         extra_context = extra_context or {}
         extra_context['model_and_url'] = model_and_url
         return super().change_view(request, object_id, form_url, extra_context=extra_context)
+
+
+@admin.register(Property)
+class PropertyAdmin(admin.ModelAdmin):
+    list_display = [field.name for field in Property._meta.get_fields()]
+    list_filter = [
+        'key',
+    ]
+    search_fields = (
+        'key',
+    )

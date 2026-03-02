@@ -5,6 +5,7 @@ from core.api import (
     CatPurchasesAnalyticsApiVersion1,
     EnergyPaymentAnalyticsApiVersion1,
     MeterReadingAnalyticsApiVersion1,
+    DatabaseBackupVersion1,
     TagListAPI,
     CatPurchasesListAPI,
     JournalEntryListAPI,
@@ -17,6 +18,7 @@ from core.api import (
     EventReminderListAPI,
     GoalListAPI,
     TaskListAPI,
+    PropertyListAPI,
 )
 from core.views import (
     indexView,
@@ -63,9 +65,19 @@ urlpatterns = [
         name='goals-and-tasks'
     ),
     path(
+        'v1/database-backup-api/',
+        DatabaseBackupVersion1.as_view(),
+        name='v1-database-backup-api'
+    ),
+    path(
         'events/',
         events,
         name='events'
+    ),
+    path(
+        'api/',
+        TemplateView.as_view(template_name='core/api.html'),
+        name='api-view'
     ),
     path(
         'generator/',
@@ -102,4 +114,5 @@ urlpatterns = [
     path('api/event-reminders/', EventReminderListAPI.as_view(), name='event-reminders-list'),
     path('api/goals/', GoalListAPI.as_view(), name='goals-list'),
     path('api/tasks/', TaskListAPI.as_view(), name='tasks-list'),
+    path('api/properties/', PropertyListAPI.as_view(), name='properties-list'),
 ]
