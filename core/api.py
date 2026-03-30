@@ -585,7 +585,7 @@ class TaskListAPI(ListAPIView):
         tasks = Task.objects.all()
         if goal:
             tasks = tasks.filter(goal__id=goal)
-        return tasks.order_by('completed', 'id')
+        return tasks.order_by('completed', 'name')
 
     def patch(self, *args, **kwargs):
         task = self.request.data.get('task')
