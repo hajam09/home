@@ -30,7 +30,7 @@
                             <td class='text-nowrap'>
                                 <span class='badge {% if g.isCompleted %}badge-success{% else %}badge-primary{% endif %}'>{{ g.name }}</span>
                             </td>
-                            <td class='text-nowrap'>{{ g.createdAt }}</td>
+                            <td class='text-nowrap'>{{ g.createdDateTime }}</td>
                             <td class='text-nowrap'>{{ g.completedTasks }}</td>
                             <td class='text-nowrap'>{{ g.totalTasks }}</td>
                             <td class='text-nowrap'>
@@ -56,7 +56,7 @@
                     <tbody>
                     <tr>
                         <td class='text-nowrap'> {{ goal.name }} </td>
-                        <td class='text-nowrap'>{{ goal.createdAt }}</td>
+                        <td class='text-nowrap'>{{ goal.createdDateTime }}</td>
                     </tr>
                     </tbody>
                 </table>

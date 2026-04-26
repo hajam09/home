@@ -459,7 +459,7 @@ class JournalEntryListAPI(ListAPIView):
             model = JournalEntry
             fields = '__all__'
 
-    queryset = JournalEntry.objects.all().prefetch_related('tags').order_by('createdAt', 'id')
+    queryset = JournalEntry.objects.all().prefetch_related('tags').order_by('createdDateTime', 'id')
     serializer_class = JournalEntrySerializer
     permission_classes = [IsAuthenticated]
 
@@ -522,7 +522,7 @@ class CatListAPI(ListAPIView):
             model = Cat
             fields = '__all__'
 
-    queryset = Cat.objects.all().prefetch_related('tags').order_by('createdAt')
+    queryset = Cat.objects.all().prefetch_related('tags').order_by('createdDateTime')
     serializer_class = CatSerializer
     permission_classes = [IsAuthenticated]
 
@@ -555,7 +555,7 @@ class EventReminderListAPI(ListAPIView):
             model = EventReminder
             fields = '__all__'
 
-    queryset = EventReminder.objects.all().order_by('createdAt')
+    queryset = EventReminder.objects.all().order_by('createdDateTime')
     serializer_class = EventReminderSerializer
     permission_classes = [IsAuthenticated]
 
@@ -566,7 +566,7 @@ class GoalListAPI(ListAPIView):
             model = Goal
             fields = '__all__'
 
-    queryset = Goal.objects.all().order_by('createdAt')
+    queryset = Goal.objects.all().order_by('createdDateTime')
     serializer_class = GoalSerializer
     permission_classes = [IsAuthenticated]
 

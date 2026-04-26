@@ -187,7 +187,7 @@ class InventoryItemAdmin(admin.ModelAdmin):
 class JournalEntryAdmin(admin.ModelAdmin):
     list_display = [
         'title',
-        'updatedAt'
+        'modifiedDateTime'
     ]
     search_fields = (
         'title',
@@ -227,7 +227,7 @@ class GoalAdmin(admin.ModelAdmin):
         extra = 5
 
     list_display = [
-        'name', 'completedTasks', 'totalTasks', 'createdAt'
+        'name', 'completedTasks', 'totalTasks', 'createdDateTime'
     ]
     inlines = [TaskInline]
 
