@@ -78,8 +78,8 @@ class Command(BaseCommand):
             je = JournalEntry(
                 title=item.get('title'),
                 content=item.get('content'),
-                createdDateTime=item.get('createdDateTime'),
-                modifiedDateTime=item.get('modifiedDateTime'),
+                createdAt=item.get('createdAt'),
+                updatedAt=item.get('updatedAt'),
             )
             jeBulk.append(je)
             tagMap.append((je, item.get('tags')))
@@ -168,8 +168,8 @@ class Command(BaseCommand):
                 microchip=item.get('microchip'),
                 additionalData=item.get('additionalData'),
                 dateOfBirth=item.get('dateOfBirth'),
-                createdDateTime=item.get('createdDateTime'),
-                modifiedDateTime=item.get('modifiedDateTime'),
+                createdAt=item.get('createdAt'),
+                updatedAt=item.get('updatedAt'),
             )
             cBulk.append(cat)
             tagMap.append((cat, item.get('tags')))
@@ -188,8 +188,8 @@ class Command(BaseCommand):
                     startDateTime=item.get('startDateTime'),
                     endDateTime=item.get('endDateTime'),
                     completed=item.get('completed'),
-                    createdDateTime=item.get('createdDateTime'),
-                    modifiedDateTime=item.get('modifiedDateTime'),
+                    createdAt=item.get('createdAt'),
+                    updatedAt=item.get('updatedAt'),
                 )
                 for item in self.request('events/')
             ]
@@ -200,8 +200,8 @@ class Command(BaseCommand):
         eventReminders = EventReminder.objects.bulk_create(
             [
                 EventReminder(
-                    createdDateTime=item.get('createdDateTime'),
-                    modifiedDateTime=item.get('modifiedDateTime'),
+                    createdAt=item.get('createdAt'),
+                    updatedAt=item.get('updatedAt'),
                     title=item.get('title'),
                     message=item.get('message'),
                     emails=item.get('emails'),
@@ -226,8 +226,8 @@ class Command(BaseCommand):
             [
                 Goal(
                     name=item.get('name'),
-                    createdDateTime=item.get('createdDateTime'),
-                    modifiedDateTime=item.get('modifiedDateTime'),
+                    createdAt=item.get('createdAt'),
+                    updatedAt=item.get('updatedAt'),
                 )
                 for item in self.request('goals/')
             ]

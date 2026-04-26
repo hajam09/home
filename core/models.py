@@ -1,3 +1,4 @@
+import uuid
 from datetime import timedelta
 
 from django.db import models
@@ -5,22 +6,27 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 
+def generateExternalId():
+    return uuid.uuid4().hex[:8]
+
+
 class BaseModel(models.Model):
-    createdDateTime = models.DateTimeField(blank=True, null=True, default=timezone.now)
-    modifiedDateTime = models.DateTimeField(blank=True, null=True, auto_now=True)
+    createdAt = models.DateTimeField(default=timezone.now)
+    updatedAt = models.DateTimeField(auto_now=True)
+    internalId = models.CharField(max_length=8, unique=True, default=generateExternalId, editable=False)
 
     class Meta:
         abstract = True
 
 
-class Tag(models.Model):
+class Tag(BaseModel):
     name = models.CharField(max_length=2048, unique=True)
 
     def __str__(self):
         return self.name
 
 
-class CatPurchases(models.Model):
+class CatPurchases(BaseModel):
     class Retailer(models.TextChoices):
         AMAZON = 'AMAZON', _('Amazon')
         EBAY = 'EBAY', _('eBay')
@@ -72,10 +78,10 @@ class JournalEntry(BaseModel):
     class Meta:
         verbose_name = 'Journal Entry'
         verbose_name_plural = 'Journal Entries'
-        ordering = ['-modifiedDateTime']
+        ordering = ['-updatedAt']
 
 
-class InventoryItem(models.Model):
+class InventoryItem(BaseModel):
     class Identifier(models.TextChoices):
         OFFICE = 'OFFICE', _('Office')
         MISCELLANEOUS = 'MISCELLANEOUS', _('Miscellaneous')
@@ -120,7 +126,7 @@ class InventoryItem(models.Model):
         verbose_name_plural = 'Inventory Items'
 
 
-class MeterPoint(models.Model):
+class MeterPoint(BaseModel):
     class UtilityMarket(models.TextChoices):
         ELECTRICITY = 'ELECTRICITY', _('Electricity')
         GAS = 'GAS', _('Gas')
@@ -145,7 +151,7 @@ class MeterPoint(models.Model):
         return f'{self.utilityMarket} - {self.identifier}'
 
 
-class EnergyPayment(models.Model):
+class EnergyPayment(BaseModel):
     class Channel(models.TextChoices):
         APP = 'APP', _('App')
         BANK = 'BANK', _('Bank')
@@ -171,7 +177,7 @@ class EnergyPayment(models.Model):
         unique_together = ('date', 'time', 'channel', 'topUpCode', 'amount', 'meterPoint')
 
 
-class MeterReading(models.Model):
+class MeterReading(BaseModel):
     meterPoint = models.ForeignKey(MeterPoint, null=True, on_delete=models.SET_NULL, related_name='meterReadings')
     date = models.DateField()
     reading = models.DecimalField(max_digits=10, decimal_places=2)
@@ -265,7 +271,7 @@ class Goal(BaseModel):
         return self.name
 
 
-class Task(models.Model):
+class Task(BaseModel):
     goal = models.ForeignKey(Goal, related_name='tasks', on_delete=models.CASCADE)
     name = models.CharField(max_length=2048)
     completed = models.BooleanField(default=False)
@@ -274,7 +280,7 @@ class Task(models.Model):
         return self.name
 
 
-class Property(models.Model):
+class Property(BaseModel):
     key = models.CharField(max_length=100)
     value = models.TextField()
 

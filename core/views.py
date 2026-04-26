@@ -220,7 +220,7 @@ def goalAndTasks(request):
                 default=Value(False),
                 output_field=BooleanField(),
             )
-        ).order_by('isCompleted', '-createdDateTime')
+        ).order_by('isCompleted', '-createdAt')
 
         if request.method == 'POST' and request.POST.get('name'):
             Goal.objects.create(name=request.POST.get('name'))
