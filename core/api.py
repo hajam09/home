@@ -22,7 +22,7 @@ from django.db.models.functions import (
 )
 from rest_framework import status, serializers
 from rest_framework.generics import ListAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -568,7 +568,7 @@ class GoalListAPI(ListAPIView):
 
     queryset = Goal.objects.all().order_by('createdDateTime')
     serializer_class = GoalSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
 
 class TaskListAPI(ListAPIView):
@@ -578,7 +578,7 @@ class TaskListAPI(ListAPIView):
             fields = '__all__'
 
     serializer_class = TaskSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
         goal = self.request.GET.get('goal')

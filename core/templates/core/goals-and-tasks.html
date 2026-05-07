@@ -3,14 +3,16 @@
 {% block content %}
     <div class='container mt-5'>
 
-        <form class='mt-5' method='post'>
-            {% csrf_token %}
-            <div class='d-flex align-items-center'>
-                <input class='form-control mr-3' type='text' name='name' required
-                       placeholder='{% if request.GET.goal %}Task name (use , to add multiple){% else %}Goal name{% endif %}'>
-                <button type='submit' class='btn btn-primary'>Save</button>
-            </div>
-        </form>
+        {% if request.user.is_authenticated %}
+            <form class='mt-5' method='post'>
+                {% csrf_token %}
+                <div class='d-flex align-items-center'>
+                    <input class='form-control mr-3' type='text' name='name' required
+                           placeholder='{% if request.GET.goal %}Task name (use , to add multiple){% else %}Goal name{% endif %}'>
+                    <button type='submit' class='btn btn-primary'>Save</button>
+                </div>
+            </form>
+        {% endif %}
 
         {% if goals %}
             <div class='table-responsive'>
@@ -113,6 +115,7 @@
             const taskList = document.getElementById('list-of-tasks');
             let completedTasks = 0;
             let totalTasks = 0;
+            const isAuthenticated = '{{ request.user.is_authenticated }}' === 'True';
 
             tasks.forEach(task => {
                 const tr = document.createElement('tr');
@@ -129,6 +132,7 @@
                 inputCheckbox.style.height = '25px';
                 inputCheckbox.style.cursor = 'pointer';
                 inputCheckbox.checked = task.completed;
+                inputCheckbox.disabled = !isAuthenticated;
 
                 inputCheckbox.addEventListener('change', () => {
                     handleTaskStatusChange(task.id, inputCheckbox.checked);
@@ -141,39 +145,41 @@
                 span.style.cursor = 'pointer';
                 span.style.fontSize = '1rem';
 
-                span.addEventListener('click', () => {
-                    const inputText = document.createElement('input');
-                    inputText.type = 'text';
-                    inputText.value = span.textContent;
-                    inputText.style.fontSize = '1rem';
-                    inputText.style.marginLeft = '10px';
-                    inputText.className = 'form-control form-control-sm';
-                    span.replaceWith(inputText);
-                    inputText.focus();
+                if (isAuthenticated) {
+                    span.addEventListener('click', () => {
+                        const inputText = document.createElement('input');
+                        inputText.type = 'text';
+                        inputText.value = span.textContent;
+                        inputText.style.fontSize = '1rem';
+                        inputText.style.marginLeft = '10px';
+                        inputText.className = 'form-control form-control-sm';
+                        span.replaceWith(inputText);
+                        inputText.focus();
 
-                    inputText.addEventListener('blur', async () => {
-                        const newName = inputText.value.trim();
-                        if (newName && newName !== task.name) {
-                            await fetch('/api/tasks/', {
-                                method: 'PATCH',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': '{{ csrf_token }}',
-                                },
-                                body: JSON.stringify({task: task.id, name: newName}),
-                            });
-                            task.name = newName; // Update local copy
-                        }
-                        inputText.replaceWith(span);
-                        span.textContent = task.name; // show updated name
-                    });
+                        inputText.addEventListener('blur', async () => {
+                            const newName = inputText.value.trim();
+                            if (newName && newName !== task.name) {
+                                await fetch('/api/tasks/', {
+                                    method: 'PATCH',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRFToken': '{{ csrf_token }}',
+                                    },
+                                    body: JSON.stringify({task: task.id, name: newName}),
+                                });
+                                task.name = newName; // Update local copy
+                            }
+                            inputText.replaceWith(span);
+                            span.textContent = task.name; // show updated name
+                        });
 
-                    inputText.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter') {
-                            inputText.blur(); // trigger blur to save
-                        }
+                        inputText.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter') {
+                                inputText.blur(); // trigger blur to save
+                            }
+                        });
                     });
-                });
+                }
 
                 div.appendChild(inputCheckbox);
                 div.appendChild(span);

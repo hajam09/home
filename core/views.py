@@ -190,7 +190,6 @@ class MeterPointView(View):
         return render(request, self.templateName, context)
 
 
-@login_required
 def goalAndTasks(request):
     goals = []
     goal = None
