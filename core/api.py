@@ -40,7 +40,6 @@ from core.models import (
     EventReminder,
     Goal,
     Task,
-    Property
 )
 
 
@@ -415,15 +414,10 @@ class MeterReadingAnalyticsApiVersion1(APIView):
 
 class DatabaseBackupVersion1(APIView):
     def post(self, request):
-        try:
-            success = service.sendDatabaseBackup()
-        except Exception as e:
-            print(f'Error sending backup: {e}')
-            success = False
-
+        response = service.sendDatabaseBackup()
         return Response(
-            {'success': success},
-            status=status.HTTP_200_OK if success else status.HTTP_500_INTERNAL_SERVER_ERROR
+            {'success': response.get('isSuccess'), 'message': response.get('message')},
+            status=status.HTTP_200_OK if response.get('isSuccess') else status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 
@@ -600,14 +594,3 @@ class TaskListAPI(ListAPIView):
 
         Task.objects.filter(id=task).update(**data)
         return Response(status=status.HTTP_200_OK)
-
-
-class PropertyListAPI(ListAPIView):
-    class PropertySerializer(serializers.ModelSerializer):
-        class Meta:
-            model = Property
-            fields = '__all__'
-
-    queryset = Property.objects.all()
-    serializer_class = PropertySerializer
-    permission_classes = [IsAuthenticated]

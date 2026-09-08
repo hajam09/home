@@ -3,10 +3,11 @@ import os
 import re
 from datetime import datetime
 
+from decouple import config
 from django.conf import settings
 from django.core.mail import EmailMessage
 
-from core.models import EnergyPayment, MeterReading, Property
+from core.models import EnergyPayment, MeterReading
 
 
 def mapChannelForEnergyPayment(label):
@@ -106,39 +107,37 @@ def generateTopUpCode(doorNumber, postcode, paymentDate, paymentTime, channel, a
 
 
 def sendDatabaseBackup():
-    """Send DB backup to emails specified in DATABASE_EMAIL property."""
-    prop = Property.objects.filter(key='DATABASE_EMAIL').first()
-    if not prop or not prop.value.strip():
-        print('No emails configured for database backup.')
-        return False
-
-    rawEmails = prop.value.replace('\r', '').split('\n')
-    emails = []
-    for part in rawEmails:
-        emails.extend([e.strip() for e in part.split(',') if e.strip()])
-
-    if not emails:
-        print('No valid emails found to send backup.')
-        return False
+    email = config('DATABASE_BACKUP_EMAIL', cast=str)
+    if not email or not email.strip():
+        return {
+            'isSuccess': False,
+            'message': 'No emails set for database backup.'
+        }
 
     databasePath = os.path.join(settings.BASE_DIR, 'db.sqlite3')
     if not os.path.exists(databasePath):
-        print(f'DB file not found: {databasePath}')
-        return False
+        return {
+            'isSuccess': False,
+            'message': f'DB file not found: {databasePath}'
+        }
 
-    email = EmailMessage(
+    emailMessage = EmailMessage(
         subject=f"BarkingHome DB Backup - {datetime.now().strftime('%Y-%m-%d')}",
         body='Attached is the current db.sqlite3 file.',
         from_email=settings.EMAIL_HOST_USER,
-        to=emails,
+        to=[email.strip()],
     )
 
     try:
         with open(databasePath, 'rb') as f:
-            email.attach('db.sqlite3', f.read(), 'application/octet-stream')
-        email.send()
-        print(f"DB backup sent at {datetime.now().strftime('%H:%M:%S')}")
-        return True
+            emailMessage.attach('db.sqlite3', f.read(), 'application/octet-stream')
+        emailMessage.send()
+        return {
+            'isSuccess': True,
+            'message': f"DB backup sent at {datetime.now().strftime('%H:%M:%S')}"
+        }
     except Exception as e:
-        print(f'DB backup failed: {e}')
-        return False
+        return {
+            'isSuccess': False,
+            'message': f'Error sending backup: {e}'
+        }
