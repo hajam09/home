@@ -35,6 +35,7 @@ class Command(BaseCommand):
         self.eventReminder()
         self.goal()
         self.task()
+        self.expense()
 
     def request(self, url):
         try:
