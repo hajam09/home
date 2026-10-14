@@ -18,6 +18,7 @@ from core.api import (
     EventReminderListAPI,
     GoalListAPI,
     TaskListAPI,
+    ExpenseListAPI,
 )
 from core.views import (
     indexView,
@@ -113,4 +114,5 @@ urlpatterns = [
     path('api/event-reminders/', EventReminderListAPI.as_view(), name='event-reminders-list'),
     path('api/goals/', GoalListAPI.as_view(), name='goals-list'),
     path('api/tasks/', TaskListAPI.as_view(), name='tasks-list'),
+    path('api/expenses/', ExpenseListAPI.as_view(), name='expenses-list'),
 ]

@@ -40,6 +40,7 @@ from core.models import (
     EventReminder,
     Goal,
     Task,
+    Expense,
 )
 
 
@@ -594,3 +595,16 @@ class TaskListAPI(ListAPIView):
 
         Task.objects.filter(id=task).update(**data)
         return Response(status=status.HTTP_200_OK)
+
+
+class ExpenseListAPI(ListAPIView):
+    class ExpenseSerializer(serializers.ModelSerializer):
+        tags = serializers.StringRelatedField(many=True)
+
+        class Meta:
+            model = Expense
+            fields = '__all__'
+
+    queryset = Expense.objects.all().prefetch_related('tags')
+    serializer_class = ExpenseSerializer
+    permission_classes = [IsAuthenticated]

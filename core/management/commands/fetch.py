@@ -15,6 +15,7 @@ from core.models import (
     EventReminder,
     Goal,
     Task,
+    Expense,
 )
 
 
@@ -270,3 +271,22 @@ class Command(BaseCommand):
             ]
         )
         self.log(f'Fetched {len(tasks)} Task objects.')
+
+    def expense(self):
+        self.log('Fetching Expense objects...')
+        tagMap = []
+        expenseBulk = []
+        for item in self.request('expenses/'):
+            expense = Expense(
+                item=item.get('item'),
+                retailer=item.get('retailer'),
+                category=item.get('category'),
+                price=item.get('price'),
+                date=item.get('date'),
+            )
+            expenseBulk.append(expense)
+            tagMap.append((expense, item.get('tags')))
+        Expense.objects.bulk_create(expenseBulk)
+        for item in tagMap:
+            item[0].tags.add(*Tag.objects.filter(name__in=item[1]))
+        self.log(f'Fetched {len(expenseBulk)} Expense objects.')

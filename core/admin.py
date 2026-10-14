@@ -21,6 +21,7 @@ from core.models import (
     MeterReading,
     Goal,
     Task,
+    Expense,
 )
 
 
@@ -246,6 +247,24 @@ class GoalAdmin(admin.ModelAdmin):
     completedTasks.short_description = 'Completed Tasks'
 
 
+@admin.register(Expense)
+class ExpenseAdmin(admin.ModelAdmin):
+    list_display = ['id', 'item', 'retailer', 'category', 'price', 'date']
+    list_filter = [
+        'retailer',
+        'category'
+    ]
+    search_fields = (
+        'item',
+        'retailer',
+        'category',
+        'tags__name',
+    )
+    filter_horizontal = (
+        'tags',
+    )
+
+
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
     list_display = [
@@ -258,14 +277,14 @@ class TagAdmin(admin.ModelAdmin):
     change_form_template = 'admin/tag-change-form.html'
 
     def usage_count(self, obj):
-        model_names = ['CatPurchases', 'JournalEntry', 'InventoryItem', 'Cat']
+        model_names = ['CatPurchases', 'JournalEntry', 'InventoryItem', 'Cat', 'Expense']
         models = [apps.get_model('core', model_name) for model_name in model_names]
         return sum(model.objects.filter(tags=obj).count() for model in models)
 
     usage_count.short_description = 'Usage Count'
 
     def change_view(self, request, object_id, form_url='', extra_context=None):
-        model_names = ['CatPurchases', 'JournalEntry', 'InventoryItem', 'Cat']
+        model_names = ['CatPurchases', 'JournalEntry', 'InventoryItem', 'Cat', 'Expense']
         models = [apps.get_model('core', model_name) for model_name in model_names]
 
         # Find related instances in all models that use this tag

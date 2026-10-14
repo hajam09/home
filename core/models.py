@@ -119,6 +119,7 @@ class InventoryItem(models.Model):
     class Meta:
         verbose_name = 'Inventory Item'
         verbose_name_plural = 'Inventory Items'
+        ordering = ['title']
 
 
 class MeterPoint(models.Model):
@@ -273,3 +274,16 @@ class Task(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Expense(models.Model):
+    item = models.CharField(max_length=255, blank=True)
+    retailer = models.CharField(max_length=255, blank=True)
+    category = models.CharField(max_length=255, blank=True)
+    price = models.DecimalField(max_digits=6, decimal_places=2)
+    date = models.DateField(default=timezone.localdate)
+    tags = models.ManyToManyField(Tag, blank=True, related_name='expenses')
+
+    class Meta:
+        verbose_name = 'Expense'
+        verbose_name_plural = 'Expenses'
