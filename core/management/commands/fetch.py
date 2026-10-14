@@ -21,6 +21,20 @@ from core.models import (
 class Command(BaseCommand):
     BASE_URL = 'https://barkinghome.pythonanywhere.com/api/'
 
+    def handle(self, *args, **kwargs):
+        self.tag()
+        self.catPurchases()
+        self.journalEntry()
+        self.inventoryItem()
+        self.meterPoint()
+        self.energyPayment()
+        self.meterReading()
+        self.cat()
+        self.event()
+        self.eventReminder()
+        self.goal()
+        self.task()
+
     def request(self, url):
         try:
             response = requests.get(
@@ -35,7 +49,7 @@ class Command(BaseCommand):
     def log(self, value):
         self.stdout.write(f'\n{value}\n')
 
-    def handle(self, *args, **kwargs):
+    def tag(self):
         self.log('Start fetching objects...')
         self.log('Fetching Tag objects...')
         tags = Tag.objects.bulk_create(
@@ -49,6 +63,7 @@ class Command(BaseCommand):
         )
         self.log(f'Fetched {len(tags)} Tag objects.')
 
+    def catPurchases(self):
         self.log('Fetching CatPurchases objects...')
         tagMap = []
         cpBulk = []
@@ -70,6 +85,7 @@ class Command(BaseCommand):
             item[0].tags.add(*Tag.objects.filter(name__in=item[1]))
         self.log(f'Fetched {len(cpBulk)} CatPurchases objects.')
 
+    def journalEntry(self):
         self.log('Fetching JournalEntry objects...')
         tagMap = []
         jeBulk = []
@@ -87,18 +103,18 @@ class Command(BaseCommand):
             item[0].tags.add(*Tag.objects.filter(name__in=item[1]))
         self.log(f'Fetched {len(jeBulk)} JournalEntry objects.')
 
+    def inventoryItem(self):
         self.log('Fetching InventoryItem objects...')
         tagMap = []
         iiBulk = []
         for item in self.request('inventory-items/'):
             ii = InventoryItem(
                 title=item.get('title'),
-                description=item.get('description'),
-                identifier=item.get('identifier'),
-                box=item.get('box'),
-                isWorking=item.get('isWorking'),
-                quantity=item.get('quantity'),
+                notes=item.get('notes'),
+                category=item.get('category'),
+                condition=item.get('condition'),
                 location=item.get('location'),
+                quantity=item.get('quantity'),
             )
             iiBulk.append(ii)
             tagMap.append((ii, item.get('tags')))
@@ -107,6 +123,7 @@ class Command(BaseCommand):
             item[0].tags.add(*Tag.objects.filter(name__in=item[1]))
         self.log(f'Fetched {len(iiBulk)} InventoryItem objects.')
 
+    def meterPoint(self):
         self.log('Fetching MeterPoint objects...')
         meterPoints = MeterPoint.objects.bulk_create(
             [
@@ -122,11 +139,12 @@ class Command(BaseCommand):
             ignore_conflicts=True
         )
         self.log(f'Fetched {len(meterPoints)} MeterPoint objects.')
-        meterPoints = {
+        self.meterPoints = {
             mp.identifier: mp
             for mp in MeterPoint.objects.all()
         }
 
+    def energyPayment(self):
         self.log('Fetching EnergyPayment objects...')
         energyPayments = EnergyPayment.objects.bulk_create(
             [
@@ -136,18 +154,19 @@ class Command(BaseCommand):
                     channel=item.get('channel'),
                     topUpCode=item.get('topUpCode'),
                     amount=item.get('amount'),
-                    meterPoint=meterPoints.get(item.get('meterPointIdentifier')),
+                    meterPoint=self.meterPoints.get(item.get('meterPointIdentifier')),
                 )
                 for item in self.request('energy-payments/')
             ]
         )
         self.log(f'Fetched {len(energyPayments)} EnergyPayment objects.')
 
+    def meterReading(self):
         self.log('Fetching MeterReading objects...')
         meterReadings = MeterReading.objects.bulk_create(
             [
                 MeterReading(
-                    meterPoint=meterPoints.get(item.get('meterPointIdentifier')),
+                    meterPoint=self.meterPoints.get(item.get('meterPointIdentifier')),
                     date=item.get('date'),
                     reading=item.get('reading'),
                 )
@@ -156,6 +175,7 @@ class Command(BaseCommand):
         )
         self.log(f'Fetched {len(meterReadings)} MeterReading objects.')
 
+    def cat(self):
         self.log('Fetching Cat objects...')
         tagMap = []
         cBulk = []
@@ -177,6 +197,7 @@ class Command(BaseCommand):
             item[0].tags.add(*Tag.objects.filter(name__in=item[1]))
         self.log(f'Fetched {len(cBulk)} Cat objects.')
 
+    def event(self):
         self.log('Fetching Event objects...')
         events = Event.objects.bulk_create(
             [
@@ -195,6 +216,7 @@ class Command(BaseCommand):
         )
         self.log(f'Fetched {len(events)} Event objects.')
 
+    def eventReminder(self):
         self.log('Fetching EventReminder objects...')
         eventReminders = EventReminder.objects.bulk_create(
             [
@@ -220,30 +242,29 @@ class Command(BaseCommand):
         )
         self.log(f'Fetched {len(eventReminders)} EventReminder objects.')
 
+    def goal(self):
         self.log('Fetching Goal objects...')
-        goals = Goal.objects.bulk_create(
-            [
-                Goal(
-                    name=item.get('name'),
-                    createdDateTime=item.get('createdDateTime'),
-                    modifiedDateTime=item.get('modifiedDateTime'),
-                )
-                for item in self.request('goals/')
-            ]
-        )
+        goalList = []
+        self.goalMap = {}
+        for item in self.request('goals/'):
+            goal = Goal(
+                name=item.get('name'),
+                createdDateTime=item.get('createdDateTime'),
+                modifiedDateTime=item.get('modifiedDateTime'),
+            )
+            goalList.append(goal)
+            self.goalMap[item.get('id')] = goal
+        goals = Goal.objects.bulk_create(goalList)
         self.log(f'Fetched {len(goals)} Goal objects.')
-        goals = {
-            g.id: g
-            for g in Goal.objects.all()
-        }
 
+    def task(self):
         self.log('Fetching Task objects...')
         tasks = Task.objects.bulk_create(
             [
                 Task(
                     name=item.get('name'),
                     completed=item.get('completed'),
-                    goal=goals.get(item.get('goal')),
+                    goal=self.goalMap.get(item.get('goal')),
                 )
                 for item in self.request('tasks/')
             ]

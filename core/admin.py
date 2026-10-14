@@ -161,19 +161,18 @@ class InventoryItemAdmin(admin.ModelAdmin):
     list_display = [
         'id',
         'title',
-        'identifier',
-        'box',
-        'quantity'
+        'category',
+        'quantity',
+        'location'
     ]
     list_filter = [
-        'identifier',
-        'box',
+        'category',
+        'location'
     ]
     search_fields = (
         'title',
-        'description',
-        'identifier',
-        'box',
+        'notes',
+        'category',
         'location',
         'tags__name',
     )
