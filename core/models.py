@@ -279,7 +279,10 @@ class Task(models.Model):
 class Expense(models.Model):
     item = models.CharField(max_length=255, blank=True)
     retailer = models.CharField(max_length=255, blank=True)
-    category = models.CharField(max_length=255, blank=True)
+    category = models.CharField(
+        max_length=255, blank=True,
+        help_text='GROCERIES, APPLIANCES, TAKE_AWAY, ENTERTAINMENT, EAT_OUT, PERSONAL_CARE, HOUSING, DONATIONS, MISCELLANEOUS, TRAVEL, INDIA, PETS'
+    )
     price = models.DecimalField(max_digits=6, decimal_places=2)
     date = models.DateField(default=timezone.localdate)
     tags = models.ManyToManyField(Tag, blank=True, related_name='expenses')
