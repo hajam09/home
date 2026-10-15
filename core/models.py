@@ -290,3 +290,9 @@ class Expense(models.Model):
     class Meta:
         verbose_name = 'Expense'
         verbose_name_plural = 'Expenses'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['retailer', 'category', 'price', 'date'],
+                name='idxExpenseRetailerCategoryPriceDate',
+            ),
+        ]
