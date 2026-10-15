@@ -15,6 +15,7 @@ def navigationPanel(request):
         linkItem('Index', reverse('core:index-view'), 'fas fa-th-large'),
         linkItem('Cat Purchases', reverse('core:cat-purchases-dashboard'), 'fas fa-shopping-cart'),
         linkItem('Energy Payments', reverse('core:energy-payments-dashboard'), 'fas fa-bolt'),
+        linkItem('Expenses', reverse('core:expense-dashboard'), 'fas fa-receipt'),
         linkItem('Events', reverse('core:events'), 'fas fa-calendar-alt'),
         linkItem('Goal & Task', reverse('core:goals-and-tasks'), 'fas fa-tasks'),
         linkItem('Generator', reverse('core:generator'), 'fas fa-plug'),

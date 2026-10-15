@@ -3,6 +3,7 @@ from django.views.generic import TemplateView
 
 from core.api import (
     CatPurchasesAnalyticsApiVersion1,
+    ExpenseAnalyticsApiVersion1,
     EnergyPaymentAnalyticsApiVersion1,
     MeterReadingAnalyticsApiVersion1,
     DatabaseBackupVersion1,
@@ -55,6 +56,11 @@ urlpatterns = [
         name='energy-payments-dashboard'
     ),
     path(
+        'expense-dashboard/',
+        TemplateView.as_view(template_name='core/expense-dashboard.html'),
+        name='expense-dashboard'
+    ),
+    path(
         'meter-points/<slug:identifier>/',
         MeterPointView.as_view(),
         name='meter-point-view-'
@@ -95,6 +101,11 @@ urlpatterns = [
         'v1/energy-payments-analytics-api/',
         EnergyPaymentAnalyticsApiVersion1.as_view(),
         name='v1-energy-payments-analytics-api'
+    ),
+    path(
+        'v1/expense-analytics-api/',
+        ExpenseAnalyticsApiVersion1.as_view(),
+        name='v1-expense-analytics-api'
     ),
     path(
         'v1/meter-readings-analytics-api/',

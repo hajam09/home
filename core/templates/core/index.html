@@ -48,10 +48,10 @@
                                 <td class='text-nowrap'>{{ model.modelName }}</td>
                                 <td class='text-nowrap'>{{ model.objectCount }}</td>
                                 <td class='text-nowrap'>
-                                    {% if model.lastActivity %} {{ model.lastActivity }} {% else %} — {% endif %}
+                                    {% if model.lastActivity %} {{ model.lastActivity }} {% else %} - {% endif %}
                                 </td>
                                 <td class='text-nowrap'>
-                                    {% if model.lastObject %} {{ model.lastObject }} {% else %} — {% endif %}
+                                    {% if model.lastObject %} {{ model.lastObject }} {% else %} - {% endif %}
                                 </td>
                             </tr>
                         {% endfor %}

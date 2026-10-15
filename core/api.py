@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta
@@ -207,6 +208,233 @@ class CatPurchasesAnalyticsApiVersion1(APIView):
             'monthly_spending': monthly_spending,
         }
 
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class ExpenseAnalyticsApiVersion1(APIView):
+
+    def get(self, request):
+        all_expenses = Expense.objects.all()
+        selected_categories = [
+            category.strip()
+            for category in request.query_params.get('category', '').split(',')
+            if category.strip()
+        ]
+        available_categories = list(
+            all_expenses.order_by('category').values_list('category', flat=True).distinct()
+        )
+        if selected_categories:
+            category_values = [category for category in selected_categories if category != '__unspecified__']
+            category_filter = Q(category__in=category_values)
+            if '__unspecified__' in selected_categories:
+                category_filter |= Q(category='')
+            qs = all_expenses.filter(category_filter)
+        else:
+            qs = all_expenses
+
+        aggregates = qs.aggregate(
+            total_spending=Sum('price'),
+            average_spend=Avg('price'),
+            first_date=Min('date'),
+            last_date=Max('date'),
+        )
+
+        total_spending = aggregates['total_spending'] or 0
+        first_date = aggregates['first_date']
+        last_date = aggregates['last_date']
+        if first_date and last_date:
+            month_count = (last_date.year - first_date.year) * 12 + last_date.month - first_date.month + 1
+        else:
+            month_count = 1
+
+        def display_name(value):
+            return value or '(Unspecified)'
+
+        category_rows = list(
+            qs.values('category')
+            .annotate(total_spent=Sum('price'), expense_count=Count('id'))
+            .order_by('-total_spent', 'category')
+        )
+        retailer_rows = list(
+            qs.values('retailer')
+            .annotate(
+                total_spent=Sum('price'),
+                expense_count=Count('id'),
+                average_spent=Round(Avg('price'), precision=2),
+            )
+            .order_by('-total_spent', 'retailer')
+        )
+        categories = [display_name(row['category']) for row in category_rows]
+
+        category_spending = [
+            {'category': display_name(row['category']), 'total_spent': float(row['total_spent'])}
+            for row in category_rows
+        ]
+        retailer_spending = [
+            {'retailer': display_name(row['retailer']), 'total_spent': float(row['total_spent'])}
+            for row in retailer_rows
+        ]
+        retailer_averages = [
+            {'retailer': display_name(row['retailer']), 'average_spent': float(row['average_spent'])}
+            for row in retailer_rows
+        ]
+
+        most_common_retailer = (
+            qs.values('retailer').annotate(count=Count('id')).order_by('-count', 'retailer').first()
+        )
+        most_common_category = (
+            qs.values('category').annotate(count=Count('id')).order_by('-count', 'category').first()
+        )
+
+        annual_spending = list(
+            qs.annotate(year=ExtractYear('date'))
+            .values('year')
+            .annotate(total_spent=Sum('price'))
+            .order_by('year')
+        )
+        annual_category_rows = list(
+            qs.annotate(year=ExtractYear('date'))
+            .values('year', 'category')
+            .annotate(total_spent=Sum('price'))
+            .order_by('year', 'category')
+        )
+        years = [row['year'] for row in annual_spending]
+        annual_by_category = {year: {'Year': year} for year in years}
+        for row in annual_category_rows:
+            annual_by_category[row['year']][display_name(row['category'])] = float(row['total_spent'])
+        for row in annual_by_category.values():
+            for category in categories:
+                row.setdefault(category, 0)
+
+        monthly_category_rows = list(
+            qs.annotate(month=TruncMonth('date'))
+            .values('month', 'category')
+            .annotate(total_spent=Sum('price'))
+            .order_by('month', 'category')
+        )
+        monthly_totals = {}
+        monthly_by_category = {}
+        for row in monthly_category_rows:
+            month = row['month'].strftime('%Y-%m')
+            category = display_name(row['category'])
+            value = float(row['total_spent'])
+            monthly_totals[month] = monthly_totals.get(month, 0) + value
+            monthly_by_category.setdefault(category, {})[month] = value
+
+        months = []
+        if first_date and last_date:
+            month = first_date.replace(day=1)
+            last_month = last_date.replace(day=1)
+            while month <= last_month:
+                month_key = month.strftime('%Y-%m')
+                months.append(month_key)
+                monthly_totals.setdefault(month_key, 0)
+                month += relativedelta(months=1)
+
+        monthly_by_category_data = [
+            {
+                'category': category,
+                'data': [monthly_by_category[category].get(month, 0) for month in months],
+            }
+            for category in categories
+        ]
+
+        top_expenses = [
+            {
+                'Date': row['date'],
+                'Item': row['item'] or '(Unspecified)',
+                'Category': display_name(row['category']),
+                'Retailer': display_name(row['retailer']),
+                'Price (£)': row['price'],
+            }
+            for row in qs.order_by('-price', '-date').values(
+                'date', 'item', 'category', 'retailer', 'price'
+            )[:10]
+        ]
+        largest_purchase = top_expenses[0] if top_expenses else None
+        highest_spend_month = max(monthly_totals.items(), key=lambda item: item[1], default=None)
+
+        data = {
+            'available_categories': [
+                {
+                    'value': category if category else '__unspecified__',
+                    'label': display_name(category),
+                }
+                for category in available_categories
+            ],
+            'selected_categories': selected_categories,
+            'total_spending': {
+                'title': 'Total Spending',
+                'value': f'£{total_spending:.2f}',
+            },
+            'number_of_purchases': {
+                'title': 'No. of Purchases',
+                'value': qs.count(),
+            },
+            'average_per_purchase': {
+                'title': 'Avg. per Purchase',
+                'value': f'£{(aggregates["average_spend"] or 0):.2f}',
+            },
+            'average_monthly_spend': {
+                'title': 'Average Monthly Spend',
+                'value': f'£{(total_spending / month_count):.2f}',
+            },
+            'average_monthly_spend_by_category': [
+                {
+                    'title': f'Avg. Monthly Spend - {category}',
+                    'value': f'£{(row["total_spent"] / month_count):.2f}',
+                }
+                for category, row in zip(categories, category_rows)
+            ],
+            'most_common_retailer': {
+                'title': 'Most Frequently Used Retailer',
+                'value': display_name(most_common_retailer['retailer']) if most_common_retailer else '-',
+            },
+            'most_common_category': {
+                'title': 'Most Frequently Used Category',
+                'value': display_name(most_common_category['category']) if most_common_category else '-',
+            },
+            'largest_purchase': {
+                'title': 'Largest Purchase',
+                'value': (
+                    f'{largest_purchase["Item"]} - £{largest_purchase["Price (£)"]} '
+                    f'({largest_purchase["Date"]})'
+                    if largest_purchase else '-'
+                ),
+            },
+            'highest_spend_month': {
+                'title': 'Highest Spend Month',
+                'value': (
+                    f'{datetime.strptime(highest_spend_month[0], "%Y-%m").strftime("%b %Y")} '
+                    f'- £{highest_spend_month[1]:.2f}'
+                    if highest_spend_month else '-'
+                ),
+            },
+            'top_expensive_purchases': {
+                'title': 'Top Expensive Purchases',
+                'value': top_expenses,
+            },
+            'total_annual_cost': {
+                'title': 'Total Annual Cost',
+                'value': [
+                    {'Year': row['year'], 'Total Spending (£)': round(float(row['total_spent']), 2)}
+                    for row in annual_spending
+                ],
+            },
+            'annual_spending_by_category': {
+                'title': 'Annual Spending by Category',
+                'value': list(annual_by_category.values()),
+            },
+            'spending_by_category': category_spending,
+            'spending_by_retailer': retailer_spending,
+            'average_spending_by_retailer': retailer_averages,
+            'monthly_spending': [
+                {'month': month, 'total_spent': monthly_totals[month]}
+                for month in months
+            ],
+            'monthly_spending_months': months,
+            'monthly_spending_by_category': monthly_by_category_data,
+        }
         return Response(data, status=status.HTTP_200_OK)
 
 
@@ -599,7 +827,7 @@ class TaskListAPI(ListAPIView):
 
 class ExpenseListAPI(ListAPIView):
     class ExpenseSerializer(serializers.ModelSerializer):
-        tags = serializers.StringRelatedField(many=True)
+        tags = serializers.PrimaryKeyRelatedField(many=True, queryset=Tag.objects.all(), required=False)
 
         class Meta:
             model = Expense
@@ -608,3 +836,9 @@ class ExpenseListAPI(ListAPIView):
     queryset = Expense.objects.all().prefetch_related('tags')
     serializer_class = ExpenseSerializer
     permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, many=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

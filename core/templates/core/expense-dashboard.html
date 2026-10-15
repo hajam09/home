@@ -1,0 +1,195 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block content %}
+    <link rel='stylesheet' href='https://cdn.datatables.net/2.0.0/css/dataTables.dataTables.css'/>
+    <style>
+        .expense-card-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 1rem;
+        }
+
+        @media (max-width: 767.98px) {
+            .expense-card-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        .expense-metric-card .card-body {
+            min-height: 130px;
+            overflow-wrap: anywhere;
+        }
+
+        .expense-metric-card .card-title {
+            min-height: 2.5rem;
+        }
+
+        .expense-metric-card .card-text {
+            font-size: clamp(1.25rem, 2vw, 1.75rem);
+        }
+    </style>
+    <div class='container mt-5' style='color: black; max-width: 90%'>
+        <div id='expense-category-filters' class='d-flex flex-wrap justify-content-center mb-3'></div>
+        <div id='expense-summary' class='mt-3'></div>
+        <section class='mt-4'>
+            <h5 class='text-center text-muted mb-3'>Average Monthly Spend by Category</h5>
+            <div id='average-monthly-by-category'></div>
+        </section>
+
+        <div class='row mt-3'>
+            <div class='col-md-6' id='top-expensive-purchases'></div>
+            <div class='col-md-6' id='total-annual-cost'></div>
+        </div>
+        <div class='mt-3' id='annual-spending-by-category'></div>
+
+        <div class='row mt-3'>
+            <div class='col-md-6'><canvas id='spending-by-category'></canvas></div>
+            <div class='col-md-6'><canvas id='spending-by-retailer'></canvas></div>
+        </div>
+        <div class='row mt-3'>
+            <div class='col-md-6'><canvas id='average-spending-by-retailer'></canvas></div>
+            <div class='col-md-6'><canvas id='monthly-spending'></canvas></div>
+        </div>
+        <div class='row mt-3'>
+            <div class='col'><canvas id='monthly-spending-by-category'></canvas></div>
+        </div>
+    </div>
+
+    <script src='https://cdn.jsdelivr.net/npm/chart.js@3.0.0/dist/chart.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0/dist/chartjs-plugin-datalabels.min.js'></script>
+    <script src='https://cdn.datatables.net/2.0.0/js/dataTables.js'></script>
+    <script src="{% static 'js/core-functions.js' %}"></script>
+    <script>
+        function createExpenseCards(containerId, cards) {
+            const container = document.getElementById(containerId);
+            const grid = document.createElement('div');
+            grid.className = 'expense-card-grid';
+
+            cards.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card expense-metric-card h-100 shadow-sm';
+
+                const body = document.createElement('div');
+                body.className = 'card-body text-center d-flex flex-column justify-content-center';
+
+                const title = document.createElement('h6');
+                title.className = 'card-title text-muted mb-2';
+                title.textContent = item.title;
+
+                const value = document.createElement('div');
+                value.className = 'card-text font-weight-bold mb-0';
+                value.textContent = item.value;
+
+                body.append(title, value);
+                card.appendChild(body);
+                grid.appendChild(card);
+            });
+
+            container.appendChild(grid);
+        }
+
+        function createCategoryFilters(categories, selectedCategories) {
+            const container = document.getElementById('expense-category-filters');
+            const url = new URL(window.location.href);
+            const selected = new Set(selectedCategories);
+
+            function addButton(label, value, active) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = `btn ${active ? 'btn-dark' : 'btn-outline-dark'} btn-sm m-1`;
+                button.textContent = label;
+                button.addEventListener('click', () => {
+                    if (value === null) {
+                        url.searchParams.delete('category');
+                    } else {
+                        const updated = new Set(selected);
+                        if (updated.has(value)) {
+                            updated.delete(value);
+                        } else {
+                            updated.add(value);
+                        }
+                        if (updated.size) {
+                            url.searchParams.set('category', [...updated].join(','));
+                        } else {
+                            url.searchParams.delete('category');
+                        }
+                    }
+                    window.location.href = url;
+                });
+                container.appendChild(button);
+            }
+
+            addButton('All categories', null, selected.size === 0);
+            categories.forEach(category => {
+                console.log(category)
+                addButton(category.label, category.value, selected.has(category.value));
+            });
+        }
+
+        window.onload = function () {
+            fetch('{% url 'core:v1-expense-analytics-api' %}' + window.location.search)
+                .then(response => response.json())
+                .then(data => {
+                    createCategoryFilters(data.available_categories, data.selected_categories);
+                    createExpenseCards('expense-summary', [
+                        data.total_spending,
+                        data.number_of_purchases,
+                        data.average_per_purchase,
+                        data.average_monthly_spend,
+                        data.most_common_retailer,
+                        data.most_common_category,
+                        data.largest_purchase,
+                        data.highest_spend_month
+                    ]);
+                    createExpenseCards('average-monthly-by-category', data.average_monthly_spend_by_category);
+
+                    create_table('top-expensive-purchases', data.top_expensive_purchases.title, data.top_expensive_purchases.value);
+                    create_table('total-annual-cost', data.total_annual_cost.title, data.total_annual_cost.value);
+                    create_table('annual-spending-by-category', data.annual_spending_by_category.title, data.annual_spending_by_category.value);
+
+                    create_bar_chart(
+                        'spending-by-category',
+                        data.spending_by_category.map(item => item.category),
+                        [{label: 'Total Spend (£)', data: data.spending_by_category.map(item => item.total_spent), backgroundColor: '#4e79a7'}],
+                        'Total Spend by Category'
+                    );
+                    create_bar_chart(
+                        'spending-by-retailer',
+                        data.spending_by_retailer.map(item => item.retailer),
+                        [{label: 'Total Spend (£)', data: data.spending_by_retailer.map(item => item.total_spent), backgroundColor: '#59a14f'}],
+                        'Total Spend by Retailer'
+                    );
+                    create_bar_chart(
+                        'average-spending-by-retailer',
+                        data.average_spending_by_retailer.map(item => item.retailer),
+                        [{label: 'Average Spend (£)', data: data.average_spending_by_retailer.map(item => item.average_spent), backgroundColor: '#f28e2b'}],
+                        'Average Spend per Retailer'
+                    );
+
+                    const months = data.monthly_spending_months;
+                    const monthLabels = months.map(month => {
+                        const [year, number] = month.split('-');
+                        return new Date(Number(year), Number(number) - 1).toLocaleDateString('en-GB', {month: 'short', year: 'numeric'});
+                    });
+                    create_bar_chart(
+                        'monthly-spending',
+                        monthLabels,
+                        [{label: 'All Expenses (£)', data: data.monthly_spending.map(item => item.total_spent), backgroundColor: '#4e79a7'}],
+                        'Monthly Spending - All Categories'
+                    );
+                    const colors = ['#4e79a7', '#f28e2b', '#e15759', '#76b7b2', '#59a14f', '#edc949', '#af7aa1', '#ff9da7', '#9c755f', '#bab0ab'];
+                    create_bar_chart(
+                        'monthly-spending-by-category',
+                        monthLabels,
+                        data.monthly_spending_by_category.map((item, index) => ({
+                            label: item.category,
+                            data: item.data,
+                            backgroundColor: colors[index % colors.length]
+                        })),
+                        'Monthly Spending by Category'
+                    );
+                })
+                .catch(error => console.error('Error fetching expense analytics:', error));
+        };
+    </script>
+{% endblock %}
